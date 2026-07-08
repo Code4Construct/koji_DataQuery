@@ -1,0 +1,18 @@
+[general]
+name=koji DataQuery
+qgisMinimumVersion=3.0
+description=kojiGIS4QGIS tool collection
+version=0.1
+author=Code4Construct
+email=ubonira@gmail.com
+about=Single-entry QGIS plugin that bundles kojiGIS4QGIS helper tools.
+tracker=http://bugs
+repository=http://repo
+hasProcessingProvider=no
+tags=python, QGIS, kojiGIS4QGIS
+homepage=http://homepage
+category=Plugins
+icon=icon.png
+experimental=True
+deprecated=False
+server=False

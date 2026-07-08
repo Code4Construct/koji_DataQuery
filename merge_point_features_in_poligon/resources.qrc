@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/merge_point_features_in_poligon" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>

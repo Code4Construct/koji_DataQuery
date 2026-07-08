@@ -1,0 +1,8 @@
+{
+  "name": "日付の統一",
+  "description": "選択した日付列を YYYY-MM-DD 形式へ統一します。和暦の R/H/S/T/M と西暦の区切り表記に対応します。",
+  "output_mode": "existing",
+  "existing_output_field": "__FIRST_INPUT__",
+  "new_output_field": "統一日付",
+  "code": "def transform(row, values):\n    text = str(values.get(\"A\", \"\")).strip()\n    if not text:\n        return \"\"\n\n    text = text.replace(\"年\", \".\").replace(\"月\", \".\").replace(\"日\", \"\")\n    text = text.replace(\"/\", \".\").replace(\"-\", \".\")\n    text = text.replace(\"．\", \".\").replace(\" \", \"\")\n\n    match = re.match(r\"^([RrHhSsTtMm])(\\d{1,2})\\.(\\d{1,2})\\.(\\d{1,2})$\", text)\n    if match:\n        era = match.group(1).upper()\n        year = int(match.group(2))\n        month = int(match.group(3))\n        day = int(match.group(4))\n        base_years = {\"R\": 2018, \"H\": 1988, \"S\": 1925, \"T\": 1911, \"M\": 1867}\n        year = base_years[era] + year\n        return f\"{year:04d}-{month:02d}-{day:02d}\"\n\n    match = re.match(r\"^(\\d{4})\\.(\\d{1,2})\\.(\\d{1,2})$\", text)\n    if match:\n        year = int(match.group(1))\n        month = int(match.group(2))\n        day = int(match.group(3))\n        return f\"{year:04d}-{month:02d}-{day:02d}\"\n\n    match = re.match(r\"^(\\d{8})$\", text)\n    if match:\n        raw = match.group(1)\n        return f\"{raw[0:4]}-{raw[4:6]}-{raw[6:8]}\"\n\n    return text\n"
+}

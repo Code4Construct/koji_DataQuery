@@ -1,0 +1,87 @@
+{
+  "package_name": "testdesu",
+  "package_type": "layer_package",
+  "created_at": "2026-06-17T20:22:51",
+  "layers": [
+    {
+      "name": "賃借施設",
+      "path": "data/賃借施設.gpkg",
+      "layername": "賃借施設",
+      "style": "styles/賃借施設.qml",
+      "visible": false,
+      "group": "複合化可能一般施設_賃借施設_此花区以外で7用途施設または消防署を除外"
+    },
+    {
+      "name": "賃借施設",
+      "path": "data/賃借施設_2.gpkg",
+      "layername": "賃借施設_2",
+      "style": "styles/賃借施設_2.qml",
+      "visible": false,
+      "group": "複合化可能一般施設_賃借施設"
+    },
+    {
+      "name": "一般施設_築35年以上40年未満",
+      "path": "data/一般施設_築35年以上40年未満.gpkg",
+      "layername": "一般施設_築35年以上40年未満",
+      "style": "styles/一般施設_築35年以上40年未満.qml",
+      "visible": false,
+      "group": "複合化可能一般施設_賃借施設_此花区以外で7用途施設または消防署を除外"
+    },
+    {
+      "name": "一般施設_築35年以上40年未満",
+      "path": "data/一般施設_築35年以上40年未満_2.gpkg",
+      "layername": "一般施設_築35年以上40年未満_2",
+      "style": "styles/一般施設_築35年以上40年未満_2.qml",
+      "visible": false,
+      "group": "複合化可能一般施設_賃借施設"
+    },
+    {
+      "name": "一般施設_築35年未満",
+      "path": "data/一般施設_築35年未満.gpkg",
+      "layername": "一般施設_築35年未満",
+      "style": "styles/一般施設_築35年未満.qml",
+      "visible": false,
+      "group": "複合化可能一般施設_賃借施設"
+    },
+    {
+      "name": "一般施設_築35年未満",
+      "path": "data/一般施設_築35年未満_2.gpkg",
+      "layername": "一般施設_築35年未満_2",
+      "style": "styles/一般施設_築35年未満_2.qml",
+      "visible": false,
+      "group": "複合化可能一般施設_賃借施設_此花区以外で7用途施設または消防署を除外"
+    },
+    {
+      "name": "一般施設_築40年以上45年未満",
+      "path": "data/一般施設_築40年以上45年未満.gpkg",
+      "layername": "一般施設_築40年以上45年未満",
+      "style": "styles/一般施設_築40年以上45年未満.qml",
+      "visible": false,
+      "group": "複合化可能一般施設_賃借施設"
+    },
+    {
+      "name": "一般施設_築40年以上45年未満",
+      "path": "data/一般施設_築40年以上45年未満_2.gpkg",
+      "layername": "一般施設_築40年以上45年未満_2",
+      "style": "styles/一般施設_築40年以上45年未満_2.qml",
+      "visible": false,
+      "group": "複合化可能一般施設_賃借施設_此花区以外で7用途施設または消防署を除外"
+    },
+    {
+      "name": "一般施設_築45年以上",
+      "path": "data/一般施設_築45年以上.gpkg",
+      "layername": "一般施設_築45年以上",
+      "style": "styles/一般施設_築45年以上.qml",
+      "visible": false,
+      "group": "複合化可能一般施設_賃借施設_此花区以外で7用途施設または消防署を除外"
+    },
+    {
+      "name": "一般施設_築45年以上",
+      "path": "data/一般施設_築45年以上_2.gpkg",
+      "layername": "一般施設_築45年以上_2",
+      "style": "styles/一般施設_築45年以上_2.qml",
+      "visible": false,
+      "group": "複合化可能一般施設_賃借施設"
+    }
+  ]
+}
