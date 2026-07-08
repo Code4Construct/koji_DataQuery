@@ -51,7 +51,6 @@ from qgis.PyQt.QtWidgets import (
     QWidget,
 )
 
-from .add_sets_layers.add_sets_layers import Add_Sets_Layers
 from .data_organize1_processor import (
     apply_processing_steps,
     parse_column_delete_step,
@@ -69,13 +68,6 @@ from .data_organize1_processor import (
 from .data_organize2_gpkg_processor import list_gpkg_layer_infos, process_gpkg, read_gpkg_rows
 from .data_organize2_query_tool import DataOrganize2QueryTool
 from .organizing_data.organizing_data_tool import OrganizingDataGpkgTool, OrganizingDataTool
-from .merge_point_features_in_poligon.merge_point_features_in_poligon import (
-    MergePointFeaturesInPoligon,
-)
-from .merge_poligon_features_in_poligon.merge_poligon_features_in_poligon import (
-    MergePoligonFeaturesInPoligon,
-)
-from .ward_circle_boundary.ward_circle_boundary import WardCircleBoundary
 
 
 DEFAULT_DATA_ORGANIZE1_CSV = (
@@ -3096,48 +3088,73 @@ class DataOrganize2GpkgDialog(DataOrganize1Dialog):
 class DataPreprocessingDialog(QDialog):
     """Launcher dialog for data preprocessing tools."""
 
-    def __init__(self, tools, run_callback, parent=None):
+    def __init__(self, tools, run_callback, plugin_dir=None, parent=None):
         super().__init__(parent)
         self.tools = tools
         self.run_callback = run_callback
+        self.plugin_dir = plugin_dir or os.path.dirname(__file__)
 
-        self.setWindowTitle('データの下処理')
-        self.setMinimumWidth(dpi_px(640))
-        self.resize(dpi_px(760), dpi_px(600))
+        self.setWindowTitle('koji DataQuery')
+        self.setMinimumWidth(dpi_px(560))
+        self.resize(dpi_px(620), dpi_px(640))
 
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(dpi_px(18), dpi_px(18), dpi_px(18), dpi_px(18))
-        main_layout.setSpacing(dpi_px(12))
+        main_layout.setSpacing(dpi_px(10))
 
-        title_row = QHBoxLayout()
-        title = QLabel('データの下処理')
-        title.setStyleSheet('font-size: 18px; font-weight: 600;')
+        header_widget = QWidget()
+        header_widget.setFixedHeight(dpi_px(42))
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(dpi_px(10))
+        header_widget.setLayout(header_layout)
+
+        header_icon = QLabel()
+        header_icon.setFixedSize(dpi_px(32), dpi_px(32))
+        icon_path = os.path.join(self.plugin_dir, 'icon.png')
+        if icon_path and os.path.exists(icon_path):
+            header_icon.setPixmap(QIcon(icon_path).pixmap(dpi_px(32), dpi_px(32)))
+        header_layout.addWidget(header_icon)
+
+        title_layout = QVBoxLayout()
+        title_layout.setContentsMargins(0, 0, 0, 0)
+        title_layout.setSpacing(0)
+        title = QLabel('koji DataQuery')
+        title.setStyleSheet('font-size: 18px; font-weight: 500;')
+        lead = QLabel('使用したい処理をクリックしてください。')
+        lead.setStyleSheet('color: #333;')
+        title_layout.addWidget(title)
+        title_layout.addWidget(lead)
+        header_layout.addLayout(title_layout)
+        header_layout.addStretch(1)
+
         metrics_label = QLabel(display_metrics_text())
         metrics_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         metrics_label.setStyleSheet('color: #555;')
-        title_row.addWidget(title)
-        title_row.addStretch(1)
-        title_row.addWidget(metrics_label)
-        main_layout.addLayout(title_row)
+        header_layout.addWidget(metrics_label)
+        main_layout.addWidget(header_widget)
 
-        lead = QLabel('使用したい処理をクリックしてください。')
-        lead.setWordWrap(True)
-        main_layout.addWidget(lead)
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFixedHeight(dpi_px(2))
+        line.setStyleSheet('background: #16864b; border: none;')
+        main_layout.addWidget(line)
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.NoFrame)
+        scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.scroll_area = scroll_area
 
         scroll_content = QWidget()
         tools_layout = QGridLayout(scroll_content)
         tools_layout.setContentsMargins(0, 0, 0, 0)
-        tools_layout.setSpacing(dpi_px(10))
+        tools_layout.setSpacing(dpi_px(8))
 
         for index, tool in enumerate(self.tools):
-            tools_layout.addWidget(self._create_tool_row(tool), index // 2, index % 2)
+            tools_layout.addWidget(self._create_tool_row(tool), index, 0)
 
         tools_layout.setColumnStretch(0, 1)
-        tools_layout.setColumnStretch(1, 1)
         scroll_area.setWidget(scroll_content)
         main_layout.addWidget(scroll_area, 1)
 
@@ -3147,7 +3164,7 @@ class DataPreprocessingDialog(QDialog):
 
     def _create_tool_row(self, tool):
         row = QPushButton()
-        row.setMinimumHeight(dpi_px(128))
+        row.setMinimumHeight(dpi_px(88))
         row.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         row.setCursor(Qt.PointingHandCursor)
         row.clicked.connect(lambda checked=False, key=tool['key']: self._run_tool(key))
@@ -3160,8 +3177,16 @@ class DataPreprocessingDialog(QDialog):
         )
 
         layout = QHBoxLayout(row)
-        layout.setContentsMargins(dpi_px(12), dpi_px(10), dpi_px(12), dpi_px(10))
-        layout.setSpacing(dpi_px(12))
+        layout.setContentsMargins(dpi_px(16), dpi_px(6), dpi_px(16), dpi_px(6))
+        layout.setSpacing(dpi_px(16))
+
+        icon_label = QLabel()
+        icon_label.setFixedSize(dpi_px(52), dpi_px(52))
+        icon_label.setAlignment(Qt.AlignCenter)
+        icon_path = tool.get('icon_path', '')
+        if icon_path and os.path.exists(icon_path):
+            icon_label.setPixmap(QIcon(icon_path).pixmap(dpi_px(48), dpi_px(48)))
+        layout.addWidget(icon_label)
 
         text_layout = QVBoxLayout()
         text_layout.setContentsMargins(0, 0, 0, 0)
@@ -3171,7 +3196,7 @@ class DataPreprocessingDialog(QDialog):
         name_label.setStyleSheet('font-weight: 600;')
         description_label = QLabel(tool['description'])
         description_label.setWordWrap(True)
-        description_label.setMinimumHeight(description_label.fontMetrics().lineSpacing() * 3 + 6)
+        description_label.setMinimumHeight(description_label.fontMetrics().lineSpacing() * 2 + 2)
         description_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         text_layout.addWidget(name_label)
@@ -3189,6 +3214,7 @@ class DataPreprocessingTool:
 
     def __init__(self, iface):
         self.iface = iface
+        self.plugin_dir = os.path.dirname(__file__)
         self.dlg = None
         self.organize_1_dialog = None
         self.organize_2_gpkg_dialog = None
@@ -3198,55 +3224,48 @@ class DataPreprocessingTool:
         self.tools = [
             {
                 'key': 'organize_1',
-                'text': 'データ整理１ ー CSV下処理',
-                'description': (
-                    'CSVファイルへの、文字列結合・日付の統一・列の削除・'
-                    'コラム名の変更等・カスタム関数による変更。例: 地番の内、他などを独立したコラムへ。'
-                ),
+                'text': 'CSV下処理',
+                'description': 'CSVの文字列結合、日付統一、列整理、カスタム関数処理を行います。',
+                'icon_path': os.path.join(self.plugin_dir, 'icons', 'csv_cleanup.svg'),
             },
             {
                 'key': 'organize_2_gpkg',
-                'text': 'データ整理２ ー GeoPackage下処理',
-                'description': (
-                    'GeoPackageファイルへの、文字列結合・日付の統一・列の削除・'
-                    'コラム名の変更等・カスタム関数による変更。例: 地番の内、他などを独立したコラムへ。'
-                ),
+                'text': 'GeoPackage下処理',
+                'description': 'GeoPackageの属性を整理し、列名変更や地番分割などを行います。',
+                'icon_path': os.path.join(self.plugin_dir, 'icons', 'gpkg_cleanup.svg'),
             },
             {
                 'key': 'organize_2_query',
-                'text': 'データ整理３ ー CSVの集計クエリ',
-                'description': '例: 地番毎集積（面積和・所有者改行列記・カウント）など。',
+                'text': 'CSV集計クエリ',
+                'description': 'CSVをキーごとに集計し、面積和、所有者列記、件数などを作成します。',
+                'icon_path': os.path.join(self.plugin_dir, 'icons', 'csv_query.svg'),
             },
             {
                 'key': 'organize_3_csv_left_join',
-                'text': 'データ整理４ ー CSVへのLeft JoinとUnion',
-                'description': 'CSVのLEFT JOIN手順を最大10ステップまで設定し、保存・読込して連続実行します。',
+                'text': 'CSVの結合',
+                'description': 'CSVのLEFT JOINと、同じ列名CSVのUNION結合を実行します。',
+                'icon_path': os.path.join(self.plugin_dir, 'icons', 'csv_join.svg'),
             },
             {
                 'key': 'organize_4_gpkg_left_join',
-                'text': 'データ整理５ ー GeoPackageへのLeft JoinとUnion',
+                'text': 'GeoPackageの結合',
                 'description': 'GeoPackageファイルへのLEFT JOINとUNION。',
+                'icon_path': os.path.join(self.plugin_dir, 'icons', 'gpkg_join.svg'),
             },
         ]
-        for tool in self.tools:
-            if tool.get('key') == 'organize_3_csv_left_join':
-                tool['text'] = 'CSVの結合（LEFT JOIN 及び UNION）'
-                tool['description'] = 'CSVのLEFT JOINと、同じ列名CSVのUNION結合を実行します。'
-
-        for tool in self.tools:
-            if tool.get('key') == 'organize_3_csv_left_join':
-                tool['text'] = 'データ整理４ ー CSVへのLeft JoinとUnion'
-                tool['description'] = 'CSVのLEFT JOINと、同じ列名CSVのUNION結合を実行します。'
 
     def run(self):
         if self.dlg is None:
             self.dlg = DataPreprocessingDialog(
                 self.tools,
                 self.run_tool,
+                self.plugin_dir,
                 self.iface.mainWindow(),
             )
 
         self.dlg.show()
+        if hasattr(self.dlg, 'scroll_area'):
+            self.dlg.scroll_area.verticalScrollBar().setValue(0)
         self.dlg.raise_()
         self.dlg.activateWindow()
 
@@ -3294,1386 +3313,3 @@ class DataPreprocessingTool:
             'データの下処理',
             'このメニューはまだ中身がありません。',
         )
-
-
-class MapSharingDummyTool:
-    """Placeholder for the future map sharing workflow."""
-
-    def __init__(self, iface):
-        self.iface = iface
-
-    def run(self):
-        QMessageBox.information(
-            self.iface.mainWindow(),
-            '地図のおすそ分けパック',
-            'この機能は現在準備中です。',
-        )
-
-
-class MapSharingLayerSelectionDialog(QDialog):
-    """Select layers to include in a map sharing package."""
-
-    def __init__(self, layers, layouts=None, checked_layer_ids=None, parent=None):
-        super().__init__(parent)
-        self.layers = layers
-        self.layouts = layouts or []
-        self.layer_by_id = {layer.id(): layer for layer in layers}
-        self.checked_layer_ids = set(checked_layer_ids or [])
-        self._changing_checks = False
-
-        self.setWindowTitle('おすそ分けパックに入れるレイヤを選択')
-        self.resize(780, 620)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(10)
-
-        lead = QLabel('地図のおすそ分けパックに入れるレイヤだけチェックしてください。')
-        lead.setWordWrap(True)
-        layout.addWidget(lead)
-
-        toolbar = QHBoxLayout()
-        select_all_button = QPushButton('すべて選択')
-        clear_button = QPushButton('選択解除')
-        select_all_button.clicked.connect(lambda: self._set_all_checked(True))
-        clear_button.clicked.connect(lambda: self._set_all_checked(False))
-        toolbar.addWidget(select_all_button)
-        toolbar.addWidget(clear_button)
-        toolbar.addStretch(1)
-        layout.addLayout(toolbar)
-
-        self.tree = QTreeWidget()
-        self.tree.setColumnCount(2)
-        self.tree.setHeaderLabels(['レイヤ構成', 'データソース'])
-        self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.tree.header().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.tree.itemChanged.connect(self._handle_item_changed)
-        layout.addWidget(self.tree, 1)
-
-        self._build_layer_tree()
-        self.tree.expandAll()
-
-        layout_label = QLabel('おすそ分けパックに入れるレイアウトを選択してください。')
-        layout_label.setWordWrap(True)
-        layout.addWidget(layout_label)
-
-        self.layout_tree = QTreeWidget()
-        self.layout_tree.setColumnCount(2)
-        self.layout_tree.setHeaderLabels(['レイアウト', '種類'])
-        self.layout_tree.header().setSectionResizeMode(0, QHeaderView.Stretch)
-        self.layout_tree.header().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        self._build_layout_tree()
-        layout.addWidget(self.layout_tree)
-
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-
-    def selected_layers(self):
-        selected_ids = set()
-        self._collect_checked_layer_ids(self.tree.invisibleRootItem(), selected_ids)
-        return [layer for layer in self.layers if layer.id() in selected_ids]
-
-    def selected_layouts(self):
-        selected_names = set()
-        root_item = self.layout_tree.invisibleRootItem()
-        for index in range(root_item.childCount()):
-            item = root_item.child(index)
-            if item.checkState(0) == Qt.Checked:
-                selected_names.add(item.data(0, Qt.UserRole))
-        return [layout for layout in self.layouts if layout.name() in selected_names]
-
-    def _set_all_checked(self, checked):
-        state = Qt.Checked if checked else Qt.Unchecked
-        self._changing_checks = True
-        root_item = self.tree.invisibleRootItem()
-        for index in range(root_item.childCount()):
-            self._set_item_checked_recursive(root_item.child(index), state)
-        layout_root_item = self.layout_tree.invisibleRootItem()
-        for index in range(layout_root_item.childCount()):
-            layout_root_item.child(index).setCheckState(0, state)
-        self._changing_checks = False
-
-    def _build_layer_tree(self):
-        added_ids = set()
-        root_node = QgsProject.instance().layerTreeRoot()
-        for child in root_node.children():
-            self._add_layer_tree_node(self.tree.invisibleRootItem(), child, added_ids)
-
-        for layer in self.layers:
-            if layer.id() not in added_ids:
-                self._add_layer_item(self.tree.invisibleRootItem(), layer)
-                added_ids.add(layer.id())
-
-        self._refresh_group_check_states(self.tree.invisibleRootItem())
-
-    def _build_layout_tree(self):
-        for layout in self.layouts:
-            item = QTreeWidgetItem(self.layout_tree.invisibleRootItem(), [layout.name(), 'レイアウト'])
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(0, Qt.Unchecked)
-            item.setData(0, Qt.UserRole, layout.name())
-
-    def _add_layer_tree_node(self, parent_item, node, added_ids):
-        if hasattr(node, 'layerId'):
-            layer = self.layer_by_id.get(node.layerId())
-            if layer is None:
-                return False
-            self._add_layer_item(parent_item, layer)
-            added_ids.add(layer.id())
-            return True
-
-        if not hasattr(node, 'children'):
-            return False
-
-        group_item = QTreeWidgetItem(parent_item, [node.name(), ''])
-        group_item.setFlags(group_item.flags() | Qt.ItemIsUserCheckable)
-        group_item.setCheckState(0, Qt.Unchecked)
-        group_item.setData(0, Qt.UserRole, '')
-
-        has_layers = False
-        for child in node.children():
-            has_layers = self._add_layer_tree_node(group_item, child, added_ids) or has_layers
-
-        if not has_layers:
-            parent_item.removeChild(group_item)
-        return has_layers
-
-    def _add_layer_item(self, parent_item, layer):
-        layer_item = QTreeWidgetItem(parent_item, [layer.name(), layer.source()])
-        layer_item.setFlags(layer_item.flags() | Qt.ItemIsUserCheckable)
-        checked = layer.id() in self.checked_layer_ids
-        layer_item.setCheckState(0, Qt.Checked if checked else Qt.Unchecked)
-        layer_item.setData(0, Qt.UserRole, layer.id())
-
-    def _handle_item_changed(self, item, column):
-        if self._changing_checks or column != 0:
-            return
-
-        self._changing_checks = True
-        if item.childCount() > 0:
-            state = item.checkState(0)
-            if state in (Qt.Checked, Qt.Unchecked):
-                for index in range(item.childCount()):
-                    self._set_item_checked_recursive(item.child(index), state)
-        self._refresh_parent_check_state(item.parent())
-        self._changing_checks = False
-
-    def _set_item_checked_recursive(self, item, state):
-        item.setCheckState(0, state)
-        for index in range(item.childCount()):
-            self._set_item_checked_recursive(item.child(index), state)
-
-    def _refresh_group_check_states(self, item):
-        for index in range(item.childCount()):
-            child = item.child(index)
-            self._refresh_group_check_states(child)
-        if item.childCount() > 0 and item is not self.tree.invisibleRootItem():
-            self._apply_group_check_state(item)
-
-    def _refresh_parent_check_state(self, item):
-        while item is not None:
-            self._apply_group_check_state(item)
-            item = item.parent()
-
-    def _apply_group_check_state(self, item):
-        checked_count = 0
-        partial_count = 0
-        for index in range(item.childCount()):
-            state = item.child(index).checkState(0)
-            if state == Qt.Checked:
-                checked_count += 1
-            elif state == Qt.PartiallyChecked:
-                partial_count += 1
-
-        if checked_count == item.childCount():
-            item.setCheckState(0, Qt.Checked)
-        elif checked_count == 0 and partial_count == 0:
-            item.setCheckState(0, Qt.Unchecked)
-        else:
-            item.setCheckState(0, Qt.PartiallyChecked)
-
-    def _collect_checked_layer_ids(self, item, selected_ids):
-        layer_id = item.data(0, Qt.UserRole)
-        if layer_id and item.checkState(0) == Qt.Checked:
-            selected_ids.add(layer_id)
-        for index in range(item.childCount()):
-            self._collect_checked_layer_ids(item.child(index), selected_ids)
-
-
-class MapSharingDialog(QDialog):
-    """Choose package export or import."""
-
-    def __init__(self, export_callback, import_callback, parent=None):
-        super().__init__(parent)
-        self.export_callback = export_callback
-        self.import_callback = import_callback
-
-        self.setWindowTitle('地図のおすそ分けパック')
-        self.setMinimumWidth(520)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(12)
-
-        title = QLabel('地図のおすそ分けパック')
-        title.setStyleSheet('font-size: 18px; font-weight: 600;')
-        layout.addWidget(title)
-
-        lead = QLabel('選択したレイヤをZIPパックに書き出すか、受け取ったおすそ分けパックを読み込みます。')
-        lead.setWordWrap(True)
-        layout.addWidget(lead)
-
-        export_button = QPushButton('おすそ分けパックを書き出し')
-        export_button.clicked.connect(self.export_callback)
-        layout.addWidget(export_button)
-
-        import_button = QPushButton('おすそ分けパックを読み込み')
-        import_button.clicked.connect(self.import_callback)
-        layout.addWidget(import_button)
-
-        button_box = QDialogButtonBox(QDialogButtonBox.Close)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-
-
-class MapSharingPackagePreviewDialog(QDialog):
-    """Show map sharing package contents before import."""
-
-    def __init__(self, manifest, parent=None):
-        super().__init__(parent)
-        self.manifest = manifest
-
-        self.setWindowTitle('おすそ分けパックから読み込むものを選択')
-        self.resize(820, 560)
-        self._changing_checks = False
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(10)
-
-        package_name = manifest.get('package_name') or '名称未設定'
-        layers = manifest.get('layers', [])
-        layouts = manifest.get('layouts', [])
-        title = QLabel('おすそ分けパックから読み込むものを選択')
-        title.setStyleSheet('font-size: 18px; font-weight: 600;')
-        layout.addWidget(title)
-
-        summary = QLabel(
-            'パック名: {0} / レイヤ数: {1} / レイアウト数: {2}'.format(
-                package_name,
-                len(layers),
-                len(layouts),
-            )
-        )
-        summary.setWordWrap(True)
-        layout.addWidget(summary)
-
-        guide = QLabel('読み込むレイヤとレイアウトにチェックを入れてください。チェックを外したものは読み込みません。')
-        guide.setWordWrap(True)
-        layout.addWidget(guide)
-
-        toolbar = QHBoxLayout()
-        select_all_button = QPushButton('すべて選択')
-        clear_button = QPushButton('選択解除')
-        select_all_button.clicked.connect(lambda: self._set_all_checked(True))
-        clear_button.clicked.connect(lambda: self._set_all_checked(False))
-        toolbar.addWidget(select_all_button)
-        toolbar.addWidget(clear_button)
-        toolbar.addStretch(1)
-        layout.addLayout(toolbar)
-
-        self.tree = QTreeWidget()
-        self.tree.setColumnCount(4)
-        self.tree.setHeaderLabels(['読み込む項目', '種類', 'データ', 'スタイル'])
-        self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.tree.header().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        self.tree.header().setSectionResizeMode(2, QHeaderView.Stretch)
-        self.tree.header().setSectionResizeMode(3, QHeaderView.ResizeToContents)
-        self.tree.itemChanged.connect(self._handle_item_changed)
-        self.tree.setRootIsDecorated(True)
-        layout.addWidget(self.tree, 1)
-
-        self._populate_tree(layers)
-        self._populate_layouts(layouts)
-        self.tree.expandAll()
-
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        button_box.button(QDialogButtonBox.Ok).setText('チェックしたものを読み込む')
-        button_box.button(QDialogButtonBox.Cancel).setText('キャンセル')
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
-
-    def _populate_tree(self, layers):
-        group_items = {}
-        for index, layer_info in enumerate(layers):
-            parent_item = self.tree.invisibleRootItem()
-            group_path = layer_info.get('group_path')
-            if not isinstance(group_path, list):
-                group_name = layer_info.get('group')
-                group_path = [group_name] if group_name else []
-
-            path_key = []
-            for group_name in group_path:
-                if not group_name:
-                    continue
-                path_key.append(group_name)
-                key = tuple(path_key)
-                if key not in group_items:
-                    group_items[key] = QTreeWidgetItem(parent_item, [group_name, 'フォルダ', '', ''])
-                    self._make_checkable_group_item(group_items[key])
-                parent_item = group_items[key]
-
-            layer_type = layer_info.get('type') or ('ベクタ' if layer_info.get('path') else 'ラスタ')
-            if layer_type == 'vector':
-                display_type = 'ベクタ'
-                data_value = layer_info.get('path', '')
-            elif layer_type == 'raster':
-                display_type = 'ラスタ/XYZ'
-                data_value = layer_info.get('source', '')
-            else:
-                display_type = layer_type
-                data_value = layer_info.get('path') or layer_info.get('source') or ''
-
-            style_value = 'あり' if layer_info.get('style') else 'なし'
-            item = QTreeWidgetItem(parent_item, [
-                layer_info.get('name') or layer_info.get('layername') or '名称未設定',
-                display_type,
-                data_value,
-                style_value,
-            ])
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(0, Qt.Checked)
-            item.setData(0, Qt.UserRole, 'layer')
-            item.setData(0, Qt.UserRole + 1, index)
-
-    def _populate_layouts(self, layouts):
-        if not layouts:
-            return
-
-        layouts_item = QTreeWidgetItem(self.tree.invisibleRootItem(), ['レイアウト', 'フォルダ', '', ''])
-        self._make_checkable_group_item(layouts_item)
-        for index, layout_info in enumerate(layouts):
-            item = QTreeWidgetItem(layouts_item, [
-                layout_info.get('name') or '名称未設定',
-                'レイアウト',
-                layout_info.get('path') or '',
-                '',
-            ])
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(0, Qt.Checked)
-            item.setData(0, Qt.UserRole, 'layout')
-            item.setData(0, Qt.UserRole + 1, index)
-        self._refresh_group_check_states(self.tree.invisibleRootItem())
-
-    def selected_layer_indexes(self):
-        selected = []
-        self._collect_selected_indexes(self.tree.invisibleRootItem(), 'layer', selected)
-        return selected
-
-    def selected_layout_indexes(self):
-        selected = []
-        self._collect_selected_indexes(self.tree.invisibleRootItem(), 'layout', selected)
-        return selected
-
-    def _set_all_checked(self, checked):
-        self._changing_checks = True
-        state = Qt.Checked if checked else Qt.Unchecked
-        root_item = self.tree.invisibleRootItem()
-        for index in range(root_item.childCount()):
-            self._set_item_checked_recursive(root_item.child(index), state)
-        self._changing_checks = False
-
-    def _make_checkable_group_item(self, item):
-        item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-        item.setCheckState(0, Qt.Checked)
-
-    def _handle_item_changed(self, item, column):
-        if self._changing_checks or column != 0:
-            return
-
-        self._changing_checks = True
-        if item.childCount() > 0:
-            state = item.checkState(0)
-            if state in (Qt.Checked, Qt.Unchecked):
-                for index in range(item.childCount()):
-                    self._set_item_checked_recursive(item.child(index), state)
-        self._refresh_parent_check_state(item.parent())
-        self._changing_checks = False
-
-    def _set_item_checked_recursive(self, item, state):
-        item.setCheckState(0, state)
-        for index in range(item.childCount()):
-            self._set_item_checked_recursive(item.child(index), state)
-
-    def _refresh_parent_check_state(self, item):
-        while item is not None:
-            self._apply_group_check_state(item)
-            item = item.parent()
-
-    def _refresh_group_check_states(self, item):
-        for index in range(item.childCount()):
-            child = item.child(index)
-            self._refresh_group_check_states(child)
-        if item.childCount() > 0 and item is not self.tree.invisibleRootItem():
-            self._apply_group_check_state(item)
-
-    def _apply_group_check_state(self, item):
-        checked_count = 0
-        partial_count = 0
-        for index in range(item.childCount()):
-            state = item.child(index).checkState(0)
-            if state == Qt.Checked:
-                checked_count += 1
-            elif state == Qt.PartiallyChecked:
-                partial_count += 1
-
-        if checked_count == item.childCount():
-            item.setCheckState(0, Qt.Checked)
-        elif checked_count == 0 and partial_count == 0:
-            item.setCheckState(0, Qt.Unchecked)
-        else:
-            item.setCheckState(0, Qt.PartiallyChecked)
-
-    def _collect_selected_indexes(self, item, item_type, selected):
-        if item.data(0, Qt.UserRole) == item_type and item.checkState(0) == Qt.Checked:
-            selected.append(item.data(0, Qt.UserRole + 1))
-        for index in range(item.childCount()):
-            self._collect_selected_indexes(item.child(index), item_type, selected)
-
-
-class MapSharingLayoutImportDialog(QDialog):
-    """Edit layout names before importing package layouts."""
-
-    def __init__(self, layouts, parent=None):
-        super().__init__(parent)
-        self.layouts = layouts
-        self.setWindowTitle('レイアウトの取り込み設定')
-        self.resize(720, 420)
-
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(18, 18, 18, 18)
-        main_layout.setSpacing(10)
-
-        title = QLabel('取り込むレイアウトを選択し、必要に応じて名前を変更してください。')
-        title.setWordWrap(True)
-        main_layout.addWidget(title)
-
-        existing_names = [layout.name() for layout in QgsProject.instance().layoutManager().layouts()]
-        existing_label = QLabel(
-            '既存レイアウト: {0}'.format(', '.join(existing_names) if existing_names else 'なし')
-        )
-        existing_label.setWordWrap(True)
-        main_layout.addWidget(existing_label)
-
-        self.table = QTableWidget(len(layouts), 3)
-        self.table.setHorizontalHeaderLabels(['取り込む', '元の名前', '取り込み後の名前'])
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
-        self.table.verticalHeader().setVisible(False)
-        main_layout.addWidget(self.table, 1)
-
-        for row, layout_info in enumerate(layouts):
-            original_name = layout_info.get('name') or 'おすそ分けレイアウト'
-            import_item = QTableWidgetItem('')
-            import_item.setFlags(import_item.flags() | Qt.ItemIsUserCheckable)
-            import_item.setCheckState(Qt.Checked)
-            self.table.setItem(row, 0, import_item)
-
-            original_item = QTableWidgetItem(original_name)
-            original_item.setFlags(original_item.flags() & ~Qt.ItemIsEditable)
-            self.table.setItem(row, 1, original_item)
-
-            name_item = QTableWidgetItem(self._default_import_name(original_name, existing_names))
-            self.table.setItem(row, 2, name_item)
-
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        button_box.button(QDialogButtonBox.Ok).setText('取り込む')
-        button_box.button(QDialogButtonBox.Cancel).setText('キャンセル')
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        main_layout.addWidget(button_box)
-
-    def selected_layouts(self):
-        selected = []
-        for row, layout_info in enumerate(self.layouts):
-            import_item = self.table.item(row, 0)
-            name_item = self.table.item(row, 2)
-            if import_item is None or import_item.checkState() != Qt.Checked:
-                continue
-            new_name = name_item.text().strip() if name_item is not None else ''
-            if not new_name:
-                continue
-            updated_info = dict(layout_info)
-            updated_info['import_name'] = new_name
-            selected.append(updated_info)
-        return selected
-
-    def _default_import_name(self, original_name, existing_names):
-        if original_name not in existing_names:
-            return original_name
-        return original_name + '_取り込み'
-
-
-class MapSharingTool:
-    """Export and import kojiGIS map sharing ZIP packages."""
-
-    def __init__(self, iface):
-        self.iface = iface
-        self.dlg = None
-        self.plugin_dir = os.path.dirname(__file__)
-
-    def run(self):
-        if self.dlg is None:
-            self.dlg = MapSharingDialog(
-                self.export_package,
-                self.import_package,
-                self.iface.mainWindow(),
-            )
-
-        self.dlg.show()
-        self.dlg.raise_()
-        self.dlg.activateWindow()
-
-    def export_package(self):
-        project = QgsProject.instance()
-        available_layers = [
-            layer
-            for layer in project.mapLayers().values()
-            if layer.type() in (QgsMapLayer.VectorLayer, QgsMapLayer.RasterLayer) and layer.isValid()
-        ]
-        available_layouts = project.layoutManager().layouts()
-        if not available_layers and not available_layouts:
-            QMessageBox.warning(
-                self.iface.mainWindow(),
-                '地図のおすそ分けパック',
-                '書き出せるレイヤまたはレイアウトがありません。',
-            )
-            return
-
-        selection_dialog = MapSharingLayerSelectionDialog(
-            available_layers,
-            available_layouts,
-            self._selected_layer_ids(),
-            self.iface.mainWindow(),
-        )
-        if selection_dialog.exec_() != QDialog.Accepted:
-            return
-
-        layers = selection_dialog.selected_layers()
-        layouts = selection_dialog.selected_layouts()
-        if not layers and not layouts:
-            QMessageBox.warning(
-                self.iface.mainWindow(),
-                '地図のおすそ分けパック',
-                'おすそ分けパックに入れるレイヤまたはレイアウトを1つ以上選択してください。',
-            )
-            return
-
-        default_name = '地図のおすそ分けパック.zip'
-        zip_path, _ = QFileDialog.getSaveFileName(
-            self.iface.mainWindow(),
-            '地図のおすそ分けパックを書き出し',
-            default_name,
-            'おすそ分けパック (*.zip);;All files (*.*)',
-        )
-        if not zip_path:
-            return
-        if not zip_path.lower().endswith('.zip'):
-            zip_path += '.zip'
-
-        try:
-            with tempfile.TemporaryDirectory(prefix='kojigis_package_') as temp_dir:
-                self._build_package(temp_dir, zip_path, layers, layouts)
-            QMessageBox.information(
-                self.iface.mainWindow(),
-                '地図のおすそ分けパック',
-                'おすそ分けパックを書き出しました。\n{0}'.format(zip_path),
-            )
-        except Exception as exc:  # pragma: no cover - shown inside QGIS
-            QMessageBox.critical(
-                self.iface.mainWindow(),
-                '地図のおすそ分けパック',
-                'おすそ分けパックの書き出しに失敗しました。\n{0}'.format(exc),
-            )
-
-    def import_package(self):
-        zip_path, _ = QFileDialog.getOpenFileName(
-            self.iface.mainWindow(),
-            '地図のおすそ分けパックを読み込み',
-            '',
-            'おすそ分けパック (*.zip);;All files (*.*)',
-        )
-        if not zip_path:
-            return
-
-        try:
-            package_dir = self._extract_package(zip_path)
-            self._load_package_directory(package_dir)
-        except Exception as exc:  # pragma: no cover - shown inside QGIS
-            QMessageBox.critical(
-                self.iface.mainWindow(),
-                '地図のおすそ分けパック',
-                'おすそ分けパックの読み込みに失敗しました。\n{0}'.format(exc),
-            )
-
-    def _build_package(self, temp_dir, zip_path, layers, layouts=None):
-        data_dir = os.path.join(temp_dir, 'data')
-        styles_dir = os.path.join(temp_dir, 'styles')
-        symbols_dir = os.path.join(temp_dir, 'symbols')
-        layouts_dir = os.path.join(temp_dir, 'layouts')
-        os.makedirs(data_dir, exist_ok=True)
-        os.makedirs(styles_dir, exist_ok=True)
-        os.makedirs(symbols_dir, exist_ok=True)
-        os.makedirs(layouts_dir, exist_ok=True)
-
-        project = QgsProject.instance()
-        manifest = {
-            'package_name': self._safe_name(project.baseName() or 'kojiGIS_package'),
-            'package_type': 'layer_package',
-            'created_at': datetime.now().isoformat(timespec='seconds'),
-            'layers': [],
-            'layouts': [],
-        }
-
-        package_gpkg_name = 'kojiGIS_layers.gpkg'
-        package_gpkg_path = os.path.join(data_dir, package_gpkg_name)
-        used_names = set()
-        vector_written = False
-        for index, layer in enumerate(layers, start=1):
-            layer_key = self._unique_name(
-                self._safe_name(layer.name()) or 'layer_{0}'.format(index),
-                used_names,
-            )
-            qml_path = os.path.join(styles_dir, layer_key + '.qml')
-
-            layer_entry = {
-                'name': layer.name(),
-                'layername': layer_key,
-                'style': 'styles/{0}.qml'.format(layer_key),
-                'visible': self._layer_is_visible(layer),
-                'group': self._layer_group_name(layer),
-                'group_path': self._layer_group_path(layer),
-            }
-            if layer.type() == QgsMapLayer.VectorLayer:
-                self._write_vector_layer(layer, package_gpkg_path, layer_key, not vector_written)
-                vector_written = True
-                layer_entry.update({
-                    'type': 'vector',
-                    'path': 'data/{0}'.format(package_gpkg_name),
-                })
-            elif layer.type() == QgsMapLayer.RasterLayer:
-                layer_entry.update({
-                    'type': 'raster',
-                    'provider': layer.providerType(),
-                    'source': layer.source(),
-                })
-            else:
-                continue
-
-            layer.saveNamedStyle(qml_path)
-            self._copy_svg_assets(qml_path, symbols_dir)
-
-            manifest['layers'].append(layer_entry)
-
-        self._write_layout_templates(layouts_dir, layouts or [], manifest)
-
-        manifest_path = os.path.join(temp_dir, 'manifest.json')
-        with open(manifest_path, 'w', encoding='utf-8') as manifest_file:
-            json.dump(manifest, manifest_file, ensure_ascii=False, indent=2)
-
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as package_zip:
-            for root, _, files in os.walk(temp_dir):
-                for file_name in files:
-                    file_path = os.path.join(root, file_name)
-                    arcname = os.path.relpath(file_path, temp_dir).replace(os.sep, '/')
-                    package_zip.write(file_path, arcname)
-
-    def _extract_package(self, zip_path):
-        imports_dir = os.path.join(self.plugin_dir, 'imported_packages')
-        os.makedirs(imports_dir, exist_ok=True)
-        base_name = self._safe_name(os.path.splitext(os.path.basename(zip_path))[0]) or 'package'
-        package_dir = os.path.join(
-            imports_dir,
-            '{0}_{1}'.format(base_name, datetime.now().strftime('%Y%m%d_%H%M%S')),
-        )
-        os.makedirs(package_dir, exist_ok=True)
-        with zipfile.ZipFile(zip_path, 'r') as package_zip:
-            self._safe_extract_zip(package_zip, package_dir)
-        return package_dir
-
-    def _load_package_directory(self, package_dir):
-        manifest_path = os.path.join(package_dir, 'manifest.json')
-        if not os.path.exists(manifest_path):
-            raise ValueError('選択したフォルダに manifest.json がありません。')
-
-        with open(manifest_path, 'r', encoding='utf-8') as manifest_file:
-            manifest = json.load(manifest_file)
-
-        preview_dialog = MapSharingPackagePreviewDialog(manifest, self.iface.mainWindow())
-        if preview_dialog.exec_() != QDialog.Accepted:
-            return
-        manifest = self._filter_manifest_by_preview_selection(manifest, preview_dialog)
-        if not manifest.get('layers') and not manifest.get('layouts'):
-            QMessageBox.warning(
-                self.iface.mainWindow(),
-                '地図のおすそ分けパック',
-                '読み込むレイヤまたはレイアウトを1つ以上選択してください。',
-            )
-            return
-
-        if manifest.get('layouts'):
-            layout_dialog = MapSharingLayoutImportDialog(
-                manifest.get('layouts', []),
-                self.iface.mainWindow(),
-            )
-            if layout_dialog.exec_() != QDialog.Accepted:
-                return
-            manifest['layouts'] = layout_dialog.selected_layouts()
-            if not manifest.get('layers') and not manifest.get('layouts'):
-                QMessageBox.warning(
-                    self.iface.mainWindow(),
-                    '地図のおすそ分けパック',
-                    '読み込むレイヤまたはレイアウトを1つ以上選択してください。',
-                )
-                return
-
-        gpkg_path_overrides = self._copy_package_gpkgs_to_user_locations(package_dir, manifest)
-        if gpkg_path_overrides is None:
-            return
-
-        destination_group = self._ask_import_group(manifest)
-        if destination_group is None:
-            return
-
-        loaded_count = self._load_manifest_layers(
-            package_dir,
-            manifest,
-            destination_group,
-            gpkg_path_overrides,
-        )
-        loaded_layout_count = self._load_layout_templates(package_dir, manifest)
-        QMessageBox.information(
-            self.iface.mainWindow(),
-            '地図のおすそ分けパック',
-            '{0} レイヤ、{1} レイアウトを読み込みました。'.format(
-                loaded_count,
-                loaded_layout_count,
-            ),
-        )
-
-    def _filter_manifest_by_preview_selection(self, manifest, preview_dialog):
-        filtered_manifest = dict(manifest)
-        layers = manifest.get('layers', [])
-        layouts = manifest.get('layouts', [])
-        selected_layer_indexes = set(preview_dialog.selected_layer_indexes())
-        selected_layout_indexes = set(preview_dialog.selected_layout_indexes())
-
-        filtered_manifest['layers'] = [
-            layer
-            for index, layer in enumerate(layers)
-            if index in selected_layer_indexes
-        ]
-        filtered_manifest['layouts'] = [
-            layout
-            for index, layout in enumerate(layouts)
-            if index in selected_layout_indexes
-        ]
-        return filtered_manifest
-
-    def _copy_package_gpkgs_to_user_locations(self, package_dir, manifest):
-        gpkg_rel_paths = []
-        for layer_info in manifest.get('layers', []):
-            rel_path = layer_info.get('path')
-            if rel_path and rel_path.lower().endswith('.gpkg') and rel_path not in gpkg_rel_paths:
-                gpkg_rel_paths.append(rel_path)
-
-        data_dir = os.path.join(package_dir, 'data')
-        if not gpkg_rel_paths and os.path.isdir(data_dir):
-            for file_name in os.listdir(data_dir):
-                if file_name.lower().endswith('.gpkg'):
-                    gpkg_rel_paths.append('data/{0}'.format(file_name))
-
-        if not gpkg_rel_paths:
-            return {}
-
-        path_overrides = {}
-        for rel_path in gpkg_rel_paths:
-            source_path = os.path.normpath(os.path.join(package_dir, rel_path))
-            self._assert_inside_directory(package_dir, source_path)
-            if not os.path.exists(source_path):
-                raise ValueError('GeoPackageが見つかりません: {0}'.format(rel_path))
-
-            default_name = os.path.basename(source_path)
-            save_path, _ = QFileDialog.getSaveFileName(
-                self.iface.mainWindow(),
-                'GeoPackageの保存先',
-                default_name,
-                'GeoPackage (*.gpkg);;All files (*.*)',
-            )
-            if not save_path:
-                return None
-            if not save_path.lower().endswith('.gpkg'):
-                save_path += '.gpkg'
-
-            shutil.copy2(source_path, save_path)
-            path_overrides[rel_path] = save_path
-
-        return path_overrides
-
-    def _load_layout_templates(self, package_dir, manifest):
-        layouts = manifest.get('layouts', [])
-        if not isinstance(layouts, list):
-            return 0
-
-        manager = QgsProject.instance().layoutManager()
-        loaded_count = 0
-        for layout_info in layouts:
-            rel_path = layout_info.get('path')
-            if not rel_path:
-                continue
-
-            template_path = os.path.normpath(os.path.join(package_dir, rel_path))
-            self._assert_inside_directory(package_dir, template_path)
-            if not os.path.exists(template_path):
-                raise ValueError('レイアウトテンプレートが見つかりません: {0}'.format(rel_path))
-
-            with open(template_path, 'r', encoding='utf-8') as template_file:
-                template_text = template_file.read()
-
-            document = QDomDocument()
-            set_content_result = document.setContent(template_text)
-            if isinstance(set_content_result, tuple):
-                set_content_ok = bool(set_content_result[0])
-            else:
-                set_content_ok = bool(set_content_result)
-            if not set_content_ok:
-                raise ValueError('レイアウトテンプレートを読み込めません: {0}'.format(rel_path))
-
-            layout = QgsPrintLayout(QgsProject.instance())
-            layout.initializeDefaults()
-            layout.loadFromTemplate(document, QgsReadWriteContext())
-            layout.setName(self._unique_layout_name(
-                layout_info.get('import_name') or layout_info.get('name') or 'おすそ分けレイアウト'
-            ))
-            manager.addLayout(layout)
-            loaded_count += 1
-
-        return loaded_count
-
-    def _write_layout_templates(self, layouts_dir, layouts, manifest):
-        used_names = set()
-        context = QgsReadWriteContext()
-        for index, layout in enumerate(layouts, start=1):
-            layout_key = self._unique_name(
-                self._safe_name(layout.name()) or 'layout_{0}'.format(index),
-                used_names,
-            )
-            qpt_path = os.path.join(layouts_dir, layout_key + '.qpt')
-            layout.saveAsTemplate(qpt_path, context)
-            manifest['layouts'].append({
-                'name': layout.name(),
-                'path': 'layouts/{0}.qpt'.format(layout_key),
-            })
-
-    def _load_manifest_layers(self, package_dir, manifest, destination_group=None, path_overrides=None):
-        layers = manifest.get('layers', [])
-        if not isinstance(layers, list):
-            raise ValueError('manifest.json の layers が配列ではありません。')
-
-        root = QgsProject.instance().layerTreeRoot()
-        loaded_count = 0
-        for layer_info in layers:
-            rel_path = layer_info.get('path')
-            layer_type = layer_info.get('type') or ('vector' if rel_path else 'raster')
-            layer_name = layer_info.get('name') or layer_info.get('layername') or 'layer'
-
-            if layer_type == 'vector':
-                if not rel_path:
-                    continue
-                source_path = path_overrides.get(rel_path) if path_overrides else None
-                if source_path is None:
-                    source_path = os.path.normpath(os.path.join(package_dir, rel_path))
-                    self._assert_inside_directory(package_dir, source_path)
-                layer_name = layer_info.get('name') or layer_info.get('layername') or os.path.basename(source_path)
-                gpkg_layer_name = layer_info.get('layername')
-                source = source_path
-                if gpkg_layer_name:
-                    source = '{0}|layername={1}'.format(source_path, gpkg_layer_name)
-                layer = QgsVectorLayer(source, layer_name, 'ogr')
-            elif layer_type == 'raster':
-                source = layer_info.get('source')
-                provider = layer_info.get('provider') or 'gdal'
-                if not source:
-                    continue
-                layer = QgsRasterLayer(source, layer_name, provider)
-            else:
-                continue
-
-            if not layer.isValid():
-                raise ValueError('レイヤを読み込めません: {0}'.format(layer_name))
-
-            style_rel_path = layer_info.get('style')
-            if style_rel_path:
-                style_path = os.path.normpath(os.path.join(package_dir, style_rel_path))
-                self._assert_inside_directory(package_dir, style_path)
-                if os.path.exists(style_path):
-                    style_result = layer.loadNamedStyle(style_path)
-                    if isinstance(style_result, tuple) and len(style_result) > 1 and not style_result[1]:
-                        raise ValueError('スタイルを読み込めません: {0}'.format(style_rel_path))
-                    layer.triggerRepaint()
-
-            QgsProject.instance().addMapLayer(layer, False)
-            parent_group = destination_group or root
-            group_path = layer_info.get('group_path')
-            if not isinstance(group_path, list):
-                group_name = layer_info.get('group')
-                group_path = [group_name] if group_name else []
-            target_group = self._find_or_create_group_path(parent_group, group_path)
-            target_group.addLayer(layer)
-
-            node = root.findLayer(layer.id())
-            if node is not None:
-                node.setItemVisibilityChecked(bool(layer_info.get('visible', True)))
-            loaded_count += 1
-
-        return loaded_count
-
-    def _write_vector_layer(self, layer, gpkg_path, layer_name, create_file):
-        options = QgsVectorFileWriter.SaveVectorOptions()
-        options.driverName = 'GPKG'
-        options.layerName = layer_name
-        options.fileEncoding = 'UTF-8'
-        if create_file:
-            options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteFile
-        else:
-            options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteLayer
-        result = QgsVectorFileWriter.writeAsVectorFormatV3(
-            layer,
-            gpkg_path,
-            QgsProject.instance().transformContext(),
-            options,
-        )
-        error_code = result[0] if isinstance(result, tuple) else result
-        if error_code != QgsVectorFileWriter.NoError:
-            message = result[1] if isinstance(result, tuple) and len(result) > 1 else 'unknown error'
-            raise RuntimeError('レイヤを書き出せません: {0} ({1})'.format(layer.name(), message))
-
-    def _copy_svg_assets(self, qml_path, symbols_dir):
-        if not os.path.exists(qml_path):
-            return
-        with open(qml_path, 'r', encoding='utf-8', errors='ignore') as qml_file:
-            qml_text = qml_file.read()
-
-        replacements = {}
-        for match in re.findall(r'["\']([^"\']+\.svg)["\']', qml_text, flags=re.IGNORECASE):
-            svg_path = match
-            if not os.path.isabs(svg_path):
-                svg_path = os.path.normpath(os.path.join(os.path.dirname(qml_path), svg_path))
-            if os.path.exists(svg_path):
-                asset_name = os.path.basename(svg_path)
-                shutil.copy2(svg_path, os.path.join(symbols_dir, asset_name))
-                replacements[match] = '../symbols/{0}'.format(asset_name)
-
-        if replacements:
-            for old_path, new_path in replacements.items():
-                qml_text = qml_text.replace(old_path, new_path)
-            with open(qml_path, 'w', encoding='utf-8') as qml_file:
-                qml_file.write(qml_text)
-
-    def _safe_extract_zip(self, package_zip, target_dir):
-        for member in package_zip.infolist():
-            target_path = os.path.normpath(os.path.join(target_dir, member.filename))
-            self._assert_inside_directory(target_dir, target_path)
-            package_zip.extract(member, target_dir)
-
-    def _assert_inside_directory(self, base_dir, path):
-        base_dir = os.path.abspath(base_dir)
-        path = os.path.abspath(path)
-        if os.path.commonpath([base_dir, path]) != base_dir:
-            raise ValueError('おすそ分けパック外のパスは使用できません。')
-
-    def _layer_is_visible(self, layer):
-        node = QgsProject.instance().layerTreeRoot().findLayer(layer.id())
-        return True if node is None else node.isVisible()
-
-    def _selected_layer_ids(self):
-        selected_ids = set()
-        try:
-            layer_tree_view = self.iface.layerTreeView()
-            selected_layers = layer_tree_view.selectedLayers()
-        except Exception:
-            selected_layers = []
-            layer_tree_view = None
-
-        selected_ids.update(layer.id() for layer in selected_layers if layer is not None)
-        if layer_tree_view is not None and hasattr(layer_tree_view, 'selectedNodes'):
-            for node in layer_tree_view.selectedNodes():
-                self._collect_layer_ids_from_node(node, selected_ids)
-        return list(selected_ids)
-
-    def _selected_group_node(self):
-        try:
-            layer_tree_view = self.iface.layerTreeView()
-        except Exception:
-            return None
-
-        if not hasattr(layer_tree_view, 'selectedNodes'):
-            return None
-
-        for node in layer_tree_view.selectedNodes():
-            if self._is_group_node(node):
-                return node
-        return None
-
-    def _collect_layer_ids_from_node(self, node, selected_ids):
-        if hasattr(node, 'layerId'):
-            layer_id = node.layerId()
-            if layer_id:
-                selected_ids.add(layer_id)
-
-        if hasattr(node, 'children'):
-            for child in node.children():
-                self._collect_layer_ids_from_node(child, selected_ids)
-
-    def _is_group_node(self, node):
-        return hasattr(node, 'children') and not hasattr(node, 'layerId')
-
-    def _ask_import_group(self, manifest):
-        default_name = 'もらい物'
-        group_name, accepted = QInputDialog.getText(
-            self.iface.mainWindow(),
-            'インポート先フォルダ名',
-            'レイヤパネルに作成するフォルダ名:',
-            QLineEdit.Normal,
-            default_name,
-        )
-        if not accepted:
-            return None
-
-        group_name = group_name.strip()
-        if not group_name:
-            QMessageBox.warning(
-                self.iface.mainWindow(),
-                '地図のおすそ分けパック',
-                'フォルダ名を入力してください。',
-            )
-            return None
-
-        return QgsProject.instance().layerTreeRoot().addGroup(group_name)
-
-    def _find_or_create_group(self, parent_group, group_name):
-        if not group_name:
-            return parent_group
-
-        if hasattr(parent_group, 'findGroup'):
-            group = parent_group.findGroup(group_name)
-            if group is not None:
-                return group
-
-        for child in parent_group.children():
-            if self._is_group_node(child) and child.name() == group_name:
-                return child
-
-        return parent_group.addGroup(group_name)
-
-    def _find_or_create_group_path(self, parent_group, group_path):
-        group = parent_group
-        for group_name in group_path:
-            if group_name:
-                group = self._find_or_create_group(group, group_name)
-        return group
-
-    def _layer_group_name(self, layer):
-        node = QgsProject.instance().layerTreeRoot().findLayer(layer.id())
-        parent = node.parent() if node is not None else None
-        if parent is not None and hasattr(parent, 'name'):
-            name = parent.name()
-            return name or None
-        return None
-
-    def _layer_group_path(self, layer):
-        node = QgsProject.instance().layerTreeRoot().findLayer(layer.id())
-        parent = node.parent() if node is not None else None
-        root = QgsProject.instance().layerTreeRoot()
-        path = []
-        while parent is not None and parent is not root and hasattr(parent, 'name'):
-            name = parent.name()
-            if name:
-                path.insert(0, name)
-            parent = parent.parent() if hasattr(parent, 'parent') else None
-        return path
-
-    def _safe_name(self, value):
-        value = re.sub(r'[^\w\-]+', '_', value, flags=re.UNICODE).strip('_')
-        return value[:80]
-
-    def _unique_name(self, value, used_names):
-        candidate = value
-        suffix = 2
-        while candidate in used_names:
-            candidate = '{0}_{1}'.format(value, suffix)
-            suffix += 1
-        used_names.add(candidate)
-        return candidate
-
-    def _unique_layout_name(self, value):
-        manager = QgsProject.instance().layoutManager()
-        existing_names = {layout.name() for layout in manager.layouts()}
-        candidate = value
-        suffix = 2
-        while candidate in existing_names:
-            candidate = '{0}_{1}'.format(value, suffix)
-            suffix += 1
-        return candidate
-
-
-class KojiGIS4QGISDialog(QDialog):
-    """Launcher dialog for bundled kojiGIS4QGIS tools."""
-
-    def __init__(self, tools, run_callback, parent=None):
-        super().__init__(parent)
-        self.tools = tools
-        self.run_callback = run_callback
-
-        self.setWindowTitle('kojiGIS4QGIS')
-        self.setMinimumWidth(dpi_px(560))
-        self.resize(dpi_px(760), dpi_px(600))
-
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(dpi_px(18), dpi_px(18), dpi_px(18), dpi_px(18))
-        main_layout.setSpacing(dpi_px(12))
-
-        title_row = QHBoxLayout()
-        title = QLabel('kojiGIS4QGIS')
-        title.setObjectName('KojiGIS4QGISTitle')
-        title.setStyleSheet('font-size: 18px; font-weight: 600;')
-        metrics_label = QLabel(display_metrics_text())
-        metrics_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        metrics_label.setStyleSheet('color: #555;')
-        title_row.addWidget(title)
-        title_row.addStretch(1)
-        title_row.addWidget(metrics_label)
-        main_layout.addLayout(title_row)
-
-        lead = QLabel('使用したい機能をクリックしてください。')
-        lead.setWordWrap(True)
-        main_layout.addWidget(lead)
-
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.NoFrame)
-
-        scroll_content = QWidget()
-        self.tools_layout = QGridLayout(scroll_content)
-        self.tools_layout.setContentsMargins(0, 0, 0, 0)
-        self.tools_layout.setSpacing(dpi_px(10))
-
-        for index, tool in enumerate(self.tools):
-            self.tools_layout.addWidget(self._create_tool_row(tool), index // 2, index % 2)
-
-        self.tools_layout.setColumnStretch(0, 1)
-        self.tools_layout.setColumnStretch(1, 1)
-        scroll_area.setWidget(scroll_content)
-        main_layout.addWidget(scroll_area, 1)
-
-        button_box = QDialogButtonBox(QDialogButtonBox.Close)
-        button_box.rejected.connect(self.reject)
-        main_layout.addWidget(button_box)
-
-    def _create_tool_row(self, tool):
-        row = QPushButton()
-        row.setMinimumHeight(dpi_px(128))
-        row.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-        row.setCursor(Qt.PointingHandCursor)
-        row.clicked.connect(lambda checked=False, key=tool['key']: self._run_tool(key))
-        row.setStyleSheet(
-            'QPushButton {{ text-align: left; border: {0}px solid #c8c8c8; border-radius: {1}px; background: #f7f7f7; }}'
-            'QPushButton:hover {{ background: #eef5ff; border-color: #7aa7d9; }}'
-            'QPushButton:pressed {{ background: #e0edf9; }}'
-            'QLabel {{ border: none; background: transparent; }}'
-            .format(dpi_px(1), dpi_px(4))
-        )
-
-        layout = QHBoxLayout(row)
-        layout.setContentsMargins(dpi_px(12), dpi_px(10), dpi_px(12), dpi_px(10))
-        layout.setSpacing(dpi_px(12))
-
-        icon_label = QLabel()
-        icon = QIcon(tool['icon_path'])
-        icon_size = dpi_px(64)
-        icon_box = dpi_px(72)
-        icon_label.setPixmap(icon.pixmap(icon_size, icon_size))
-        icon_label.setFixedSize(icon_box, icon_box)
-        icon_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(icon_label)
-
-        text_layout = QVBoxLayout()
-        text_layout.setContentsMargins(0, 0, 0, 0)
-        text_layout.setSpacing(4)
-
-        name_label = QLabel(tool['text'])
-        name_label.setStyleSheet('font-weight: 600;')
-        description_label = QLabel(tool['description'])
-        description_label.setWordWrap(True)
-        description_label.setMinimumHeight(description_label.fontMetrics().lineSpacing() * 3 + 6)
-        description_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-        text_layout.addWidget(name_label)
-        text_layout.addWidget(description_label)
-        layout.addLayout(text_layout, 1)
-
-        return row
-
-    def _run_tool(self, key):
-        self.run_callback(key)
-
-
-class KojiGIS4QGIS:
-    """Single-entry wrapper plugin for kojiGIS4QGIS tools."""
-
-    def __init__(self, iface):
-        self.iface = iface
-        self.plugin_dir = os.path.dirname(__file__)
-        self.actions = []
-        self.child_plugins = {}
-        self.tool_definitions = []
-        self.dlg = None
-        self.menu_title = self.tr(u'&kojiGIS4QGIS')
-
-        locale = QSettings().value('locale/userLocale', '')[0:2]
-        locale_path = os.path.join(
-            self.plugin_dir,
-            'i18n',
-            'KojiGIS4QGIS_{}.qm'.format(locale),
-        )
-
-        if os.path.exists(locale_path):
-            self.translator = QTranslator()
-            self.translator.load(locale_path)
-            QCoreApplication.installTranslator(self.translator)
-
-    def tr(self, message):
-        return QCoreApplication.translate('KojiGIS4QGIS', message)
-
-    def initGui(self):
-        icon_path = os.path.join(self.plugin_dir, 'icon.png')
-        icon = QIcon(icon_path)
-
-        self._add_tool(
-            key='data_preprocessing',
-            text=self.tr(u'データの下処理'),
-            description=self.tr(u'CSVやGeoPackageの整理、集計キー作成、LEFT JOINなどの下処理メニューを開きます。'),
-            plugin_class=DataPreprocessingTool,
-            icon_path=os.path.join(self.plugin_dir, 'data_preprocessing_icon.svg'),
-        )
-        self._add_tool(
-            key='map_sharing',
-            text=self.tr(u'地図のおすそ分けパック'),
-            description=self.tr(u'選択したレイヤ、スタイル、シンボルをZIPパックにして共有・読み込みします。'),
-            plugin_class=MapSharingTool,
-            icon_path=os.path.join(self.plugin_dir, 'map_sharing_icon.svg'),
-        )
-        self._add_tool(
-            key='add_sets_layers',
-            text=self.tr(u'レイヤセットを追加'),
-            description=self.tr(u'施設統合ポテンシャルマップ用のレイヤセットをまとめて追加します。'),
-            plugin_class=Add_Sets_Layers,
-            icon_path=os.path.join(self.plugin_dir, 'add_sets_layers', 'icon.png'),
-        )
-        self._add_tool(
-            key='ward_circle_boundary',
-            text=self.tr(u'区境界・2km円を作成'),
-            description=self.tr(u'選択した地物から区境界と2km円を作成し、結果をレイヤとして保存します。'),
-            plugin_class=WardCircleBoundary,
-            icon_path=os.path.join(self.plugin_dir, 'ward_circle_boundary', 'icon.png'),
-        )
-        self._add_tool(
-            key='merge_point_features_in_poligon',
-            text=self.tr(u'ポリゴン内のポイントを統合'),
-            description=self.tr(u'選択したポリゴン内にある表示中のポイント地物を抽出して統合します。'),
-            plugin_class=MergePointFeaturesInPoligon,
-            icon_path=os.path.join(
-                self.plugin_dir,
-                'merge_point_features_in_poligon',
-                'icon.png',
-            ),
-        )
-        self._add_tool(
-            key='merge_poligon_features_in_poligon',
-            text=self.tr(u'ポリゴン内のポリゴンを統合'),
-            description=self.tr(u'選択したポリゴン内にある表示中のポリゴン地物を抽出して統合します。'),
-            plugin_class=MergePoligonFeaturesInPoligon,
-            icon_path=os.path.join(
-                self.plugin_dir,
-                'merge_poligon_features_in_poligon',
-                'icon.png',
-            ),
-        )
-
-        self.main_action = QAction(icon, self.tr(u'kojiGIS4QGIS'), self.iface.mainWindow())
-        self.main_action.triggered.connect(self.show_dialog)
-        self.iface.addToolBarIcon(self.main_action)
-        self.iface.addPluginToMenu(self.menu_title, self.main_action)
-        self.actions.append(self.main_action)
-
-    def _add_tool(self, key, text, description, plugin_class, icon_path):
-        self.tool_definitions.append({
-            'key': key,
-            'text': text,
-            'description': description,
-            'icon_path': icon_path,
-        })
-        self.child_plugins[key] = {
-            'class': plugin_class,
-            'instance': None,
-            'text': text,
-        }
-
-    def unload(self):
-        for action in self.actions:
-            self.iface.removePluginMenu(self.menu_title, action)
-            self.iface.removeToolBarIcon(action)
-
-        if self.dlg is not None:
-            self.dlg.close()
-            self.dlg = None
-
-    def show_dialog(self):
-        if self.dlg is None:
-            self.dlg = KojiGIS4QGISDialog(
-                self.tool_definitions,
-                self.run_tool,
-                self.iface.mainWindow(),
-            )
-
-        self.dlg.show()
-        self.dlg.raise_()
-        self.dlg.activateWindow()
-
-    def run_tool(self, key):
-        tool = self.child_plugins.get(key)
-        if tool is None:
-            QMessageBox.warning(
-                self.iface.mainWindow(),
-                self.tr(u'kojiGIS4QGIS'),
-                self.tr(u'The selected tool was not found.'),
-            )
-            return
-
-        try:
-            if tool['instance'] is None:
-                tool['instance'] = tool['class'](self.iface)
-                if hasattr(tool['instance'], 'first_start'):
-                    tool['instance'].first_start = True
-
-            tool['instance'].run()
-        except Exception as exc:  # pragma: no cover - shown inside QGIS
-            QMessageBox.critical(
-                self.iface.mainWindow(),
-                self.tr(u'kojiGIS4QGIS'),
-                self.tr(u'Failed to start tool: {0}').format(exc),
-            )

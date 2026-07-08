@@ -2,7 +2,7 @@
 
 
 def classFactory(iface):  # pylint: disable=invalid-name
-    """Load kojiGIS4QGIS plugin."""
-    from .kojiGIS4QGIS import KojiGIS4QGIS
+    """Load the koji DataQuery plugin."""
+    from .koji_DataQuery import KojiDataQuery
 
-    return KojiGIS4QGIS(iface)
+    return KojiDataQuery(iface)
