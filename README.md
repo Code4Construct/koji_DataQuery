@@ -1,4 +1,4 @@
-# koji DataQuery
+# koji_DataQuery
 
 koji DataQuery is a QGIS 3 plugin for CSV and GeoPackage data preparation workflows.
 It aims to become a Power Query-like toolset for QGIS.
