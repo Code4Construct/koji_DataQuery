@@ -1,16 +1,13 @@
 [general]
 name=koji DataQuery
 qgisMinimumVersion=3.0
-description=CSV and GeoPackage preprocessing tools for QGIS.
+description=CSV and GeoPackage preprocessing tools for QGIS. Aiming to be a Power Query-like workflow for QGIS.
 version=0.1.0
 author=Code4Construct
 email=ubonira@gmail.com
-about=koji DataQuery opens the data preprocessing tools from kojiGIS4QGIS: CSV cleanup, GeoPackage cleanup, aggregation queries, and CSV/GeoPackage LEFT JOIN and UNION workflows.
-tracker=http://bugs
-repository=http://repo
+about=koji DataQuery aims to provide a Power Query-like workflow for QGIS, with tools for CSV cleanup, GeoPackage cleanup, aggregation queries, and CSV/GeoPackage LEFT JOIN and UNION workflows.
 hasProcessingProvider=no
 tags=python,QGIS,CSV,GeoPackage,data preprocessing,LEFT JOIN,UNION
-homepage=http://homepage
 category=Vector
 icon=icon.png
 experimental=True

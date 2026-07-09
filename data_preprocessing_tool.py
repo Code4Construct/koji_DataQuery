@@ -68,6 +68,7 @@ from .data_organize1_processor import (
 from .data_organize2_gpkg_processor import list_gpkg_layer_infos, process_gpkg, read_gpkg_rows
 from .data_organize2_query_tool import DataOrganize2QueryTool
 from .organizing_data.organizing_data_tool import OrganizingDataGpkgTool, OrganizingDataTool
+from .config_paths import process_config_dir, process_config_path, project_dir
 
 
 DEFAULT_DATA_ORGANIZE1_CSV = (
@@ -78,6 +79,8 @@ DEFAULT_DATA_ORGANIZE1_CSV = (
 
 DATA_ORGANIZE1_DEFAULT_CONFIG_FILENAME = 'kojiGIS_tools_data_organize1_csv_cleanup_default.json'
 DATA_ORGANIZE2_DEFAULT_CONFIG_FILENAME = 'kojiGIS_tools_data_organize2_gpkg_cleanup_default.json'
+DATA_ORGANIZE1_PROCESS_NAME = 'CSV下処理'
+DATA_ORGANIZE2_PROCESS_NAME = 'GeoPackage下処理'
 
 
 def display_metrics_text():
@@ -1441,25 +1444,24 @@ class DataOrganize1Dialog(QDialog):
 
         self.delimiter_combo = QComboBox()
         self.delimiter_combo.addItems([',', '\\t', ';'])
+        self.delimiter_combo.hide()
         self.input_encoding_combo = QComboBox()
         self.input_encoding_combo.addItems(['UTF-8', 'CP932', 'Shift_JIS'])
         self.output_encoding_combo = QComboBox()
         self.output_encoding_combo.addItems(['UTF-8', 'CP932', 'Shift_JIS'])
         self.preview_status_label = QLabel('')
+        self.preview_status_label.hide()
 
         io_layout.addWidget(QLabel('入力CSV'), 0, 0)
         io_layout.addWidget(self.input_csv_edit, 0, 1)
         io_layout.addWidget(input_browse, 0, 2)
+        io_layout.addWidget(QLabel('入力文字コード'), 0, 3)
+        io_layout.addWidget(self.input_encoding_combo, 0, 4)
         io_layout.addWidget(QLabel('出力CSV'), 1, 0)
         io_layout.addWidget(self.output_csv_edit, 1, 1)
         io_layout.addWidget(output_browse, 1, 2)
-        io_layout.addWidget(QLabel('区切り'), 2, 0)
-        io_layout.addWidget(self.delimiter_combo, 2, 1)
-        io_layout.addWidget(QLabel('入力文字コード'), 2, 2)
-        io_layout.addWidget(self.input_encoding_combo, 2, 3)
-        io_layout.addWidget(QLabel('出力文字コード'), 2, 4)
-        io_layout.addWidget(self.output_encoding_combo, 2, 5)
-        io_layout.addWidget(self.preview_status_label, 3, 1, 1, 5)
+        io_layout.addWidget(QLabel('出力文字コード'), 1, 3)
+        io_layout.addWidget(self.output_encoding_combo, 1, 4)
         main_layout.addWidget(io_group)
 
         splitter = QSplitter(Qt.Horizontal)
@@ -1525,11 +1527,11 @@ class DataOrganize1Dialog(QDialog):
         main_layout.addWidget(preview_group, 3)
 
         buttons = QDialogButtonBox()
-        buttons.addButton('設定を読込', QDialogButtonBox.ActionRole)
-        buttons.addButton('設定を保存', QDialogButtonBox.ActionRole)
+        buttons.addButton('プリセット呼出', QDialogButtonBox.ActionRole)
+        buttons.addButton('プリセット更新', QDialogButtonBox.ActionRole)
         preview_button = buttons.addButton('プレビュー更新', QDialogButtonBox.ActionRole)
-        load_button = buttons.addButton('設定を読込', QDialogButtonBox.ActionRole)
-        save_button = buttons.addButton('設定を保存', QDialogButtonBox.ActionRole)
+        load_button = buttons.addButton('プリセット呼出', QDialogButtonBox.ActionRole)
+        save_button = buttons.addButton('プリセット更新', QDialogButtonBox.ActionRole)
         default_load_button = buttons.addButton('初期設定読込', QDialogButtonBox.ActionRole)
         default_save_button = buttons.addButton('初期設定上書', QDialogButtonBox.ActionRole)
         for obsolete_button in buttons.buttons()[:2]:
@@ -1539,7 +1541,7 @@ class DataOrganize1Dialog(QDialog):
         default_load_button.clicked.connect(self.load_default_config)
         default_save_button.clicked.connect(self.save_default_config)
         preview_button.clicked.connect(self.load_preview_from_input)
-        run_button = buttons.addButton('実行（実装済み処理）', QDialogButtonBox.AcceptRole)
+        run_button = buttons.addButton('実行', QDialogButtonBox.AcceptRole)
         run_button.clicked.connect(self.run_processing)
         close_button = buttons.addButton(QDialogButtonBox.Close)
         close_button.clicked.connect(self.reject)
@@ -1550,11 +1552,11 @@ class DataOrganize1Dialog(QDialog):
         footer_layout = QHBoxLayout(footer)
         footer_layout.setContentsMargins(0, 0, 0, 0)
         footer_layout.setSpacing(dpi_px(8))
-        footer_load_button = QPushButton('設定を読込')
-        footer_save_button = QPushButton('設定を保存')
+        footer_load_button = QPushButton('プリセット呼出')
+        footer_save_button = QPushButton('プリセット更新')
         footer_default_load_button = QPushButton('初期設定読込')
         footer_default_save_button = QPushButton('初期設定上書')
-        footer_run_button = QPushButton('実行（実装済み処理）')
+        footer_run_button = QPushButton('実行')
         footer_preview_button = QPushButton('プレビュー更新')
         footer_close_button = QPushButton('Close')
         footer_load_button.clicked.connect(self.load_config_dialog)
@@ -2660,17 +2662,12 @@ class DataOrganize1Dialog(QDialog):
             json.dump(config, f, ensure_ascii=False, indent=2)
 
     def _project_dir(self):
-        project_path = QgsProject.instance().fileName()
-        if project_path:
-            project_dir = os.path.dirname(project_path)
-            if project_dir:
-                return project_dir
-        return ''
+        return project_dir()
 
     def _config_initial_dir(self):
-        project_dir = self._project_dir()
-        if project_dir:
-            return project_dir
+        config_dir = process_config_dir(DATA_ORGANIZE1_PROCESS_NAME, create=True)
+        if config_dir:
+            return config_dir
         input_csv = self.input_csv_edit.text().strip()
         if input_csv:
             folder = os.path.dirname(input_csv)
@@ -2679,21 +2676,25 @@ class DataOrganize1Dialog(QDialog):
         return ''
 
     def _default_config_path(self):
-        project_dir = self._project_dir()
-        if not project_dir:
+        path = process_config_path(
+            DATA_ORGANIZE1_PROCESS_NAME,
+            DATA_ORGANIZE1_DEFAULT_CONFIG_FILENAME,
+            create_dir=True,
+        )
+        if not path:
             QMessageBox.warning(
                 self,
                 'データ整理１',
                 'QGISプロジェクトが未保存です。\n先にプロジェクトを保存してください。',
             )
             return ''
-        return os.path.join(project_dir, DATA_ORGANIZE1_DEFAULT_CONFIG_FILENAME)
+        return path
 
     def _default_config_path_silent(self):
-        project_dir = self._project_dir()
-        if not project_dir:
-            return ''
-        return os.path.join(project_dir, DATA_ORGANIZE1_DEFAULT_CONFIG_FILENAME)
+        return process_config_path(
+            DATA_ORGANIZE1_PROCESS_NAME,
+            DATA_ORGANIZE1_DEFAULT_CONFIG_FILENAME,
+        )
 
     def run_processing(self):
         input_csv = self.input_csv_edit.text().strip()
@@ -2996,9 +2997,9 @@ class DataOrganize2GpkgDialog(DataOrganize1Dialog):
             QMessageBox.information(self, 'データ整理２', '初期設定を上書き保存しました。\n\n{}'.format(path))
 
     def _config_initial_dir(self):
-        project_dir = self._project_dir()
-        if project_dir:
-            return project_dir
+        config_dir = process_config_dir(DATA_ORGANIZE2_PROCESS_NAME, create=True)
+        if config_dir:
+            return config_dir
         input_gpkg = self.input_csv_edit.text().strip()
         if input_gpkg:
             folder = os.path.dirname(input_gpkg)
@@ -3007,21 +3008,25 @@ class DataOrganize2GpkgDialog(DataOrganize1Dialog):
         return ''
 
     def _default_config_path(self):
-        project_dir = self._project_dir()
-        if not project_dir:
+        path = process_config_path(
+            DATA_ORGANIZE2_PROCESS_NAME,
+            DATA_ORGANIZE2_DEFAULT_CONFIG_FILENAME,
+            create_dir=True,
+        )
+        if not path:
             QMessageBox.warning(
                 self,
                 'データ整理２',
                 'QGISプロジェクトが未保存です。\n先にプロジェクトを保存してください。',
             )
             return ''
-        return os.path.join(project_dir, DATA_ORGANIZE2_DEFAULT_CONFIG_FILENAME)
+        return path
 
     def _default_config_path_silent(self):
-        project_dir = self._project_dir()
-        if not project_dir:
-            return ''
-        return os.path.join(project_dir, DATA_ORGANIZE2_DEFAULT_CONFIG_FILENAME)
+        return process_config_path(
+            DATA_ORGANIZE2_PROCESS_NAME,
+            DATA_ORGANIZE2_DEFAULT_CONFIG_FILENAME,
+        )
 
     def run_processing(self):
         input_gpkg = self.input_csv_edit.text().strip()

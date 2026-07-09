@@ -28,9 +28,11 @@ from qgis.PyQt.QtWidgets import (
 )
 
 from .data_organize1_processor import normalize_headers
+from .config_paths import process_config_dir, process_config_path, project_dir as kdq_project_dir
 
 
 DEFAULT_CONFIG_FILENAME = 'kojiGIS_tools_data_organize2_query_default.json'
+PROCESS_NAME = 'CSV集計クエリ'
 
 
 AGGREGATE_OPERATIONS = [
@@ -238,8 +240,8 @@ class DataOrganize2QueryDialog(QDialog):
         layout.addWidget(preview_group, 1)
 
         footer = QHBoxLayout()
-        load_button = QPushButton('設定を読込')
-        save_button = QPushButton('設定を保存')
+        load_button = QPushButton('プリセット呼出')
+        save_button = QPushButton('プリセット更新')
         default_load_button = QPushButton('初期設定読込')
         default_save_button = QPushButton('初期設定上書')
         preview_button = QPushButton('プレビュー更新')
@@ -422,9 +424,9 @@ class DataOrganize2QueryDialog(QDialog):
             json.dump(self.get_config(), f, ensure_ascii=False, indent=2)
 
     def config_initial_dir(self):
-        project_dir = self.project_dir()
-        if project_dir:
-            return project_dir
+        config_dir = process_config_dir(PROCESS_NAME, create=True)
+        if config_dir:
+            return config_dir
         input_csv = self.input_csv_edit.text().strip()
         if input_csv:
             folder = os.path.dirname(input_csv)
@@ -433,8 +435,8 @@ class DataOrganize2QueryDialog(QDialog):
         return ''
 
     def default_config_path(self, silent=False):
-        project_dir = self.project_dir()
-        if not project_dir:
+        path = process_config_path(PROCESS_NAME, DEFAULT_CONFIG_FILENAME, create_dir=not silent)
+        if not path:
             if not silent:
                 QMessageBox.warning(
                     self,
@@ -442,11 +444,10 @@ class DataOrganize2QueryDialog(QDialog):
                     'QGISプロジェクトが未保存です。\n先にプロジェクトを保存してください。',
                 )
             return ''
-        return os.path.join(project_dir, DEFAULT_CONFIG_FILENAME)
+        return path
 
     def project_dir(self):
-        project_path = QgsProject.instance().fileName()
-        return os.path.dirname(project_path) if project_path else ''
+        return kdq_project_dir()
 
     def load_headers(self):
         path = self.input_csv_edit.text().strip()

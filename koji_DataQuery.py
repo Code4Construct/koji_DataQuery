@@ -6,7 +6,7 @@ from qgis.PyQt.QtCore import QCoreApplication, QSettings, QTranslator
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction, QMessageBox
 
-from .kojiGIS4QGIS import DataPreprocessingTool
+from .data_preprocessing_tool import DataPreprocessingTool
 
 
 class KojiDataQuery:

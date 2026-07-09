@@ -44,6 +44,8 @@ MODE_SELECT_FIELDS = 'select_fields'
 MODE_OVERWRITE_FIELDS = 'overwrite_fields'
 DEFAULT_CONFIG_FILENAME = 'kojiGIS_tools_data_organize3_csv_join_default.json'
 GPKG_DEFAULT_CONFIG_FILENAME = 'kojiGIS_tools_data_organize4_gpkg_join_default.json'
+CSV_JOIN_PROCESS_NAME = 'CSVの結合'
+GPKG_JOIN_PROCESS_NAME = 'GeoPackageの結合'
 
 COL_CSV_B = 0
 COL_MODE = 1
@@ -58,9 +60,11 @@ ENCODING_OPTIONS = ['UTF-8', 'utf-8-sig', 'CP932', 'Shift_JIS']
 
 try:
     from ..data_organize2_gpkg_processor import list_gpkg_layer_infos, open_gpkg_layer
+    from ..config_paths import process_config_dir, process_config_path, project_dir as kdq_project_dir
 except Exception:
     list_gpkg_layer_infos = None
     open_gpkg_layer = None
+    from config_paths import process_config_dir, process_config_path, project_dir as kdq_project_dir
 
 
 class FieldSelectionDialog(QDialog):
@@ -401,8 +405,8 @@ class OrganizingDataDialog(QDialog):
         layout.addLayout(top_layout)
 
         toolbar = QHBoxLayout()
-        self.load_button = QPushButton('設定を読込')
-        self.save_button = QPushButton('設定を保存')
+        self.load_button = QPushButton('プリセット呼出')
+        self.save_button = QPushButton('プリセット更新')
         self.default_load_button = QPushButton('初期設定読込')
         self.default_save_button = QPushButton('初期設定上書')
 
@@ -936,15 +940,10 @@ class OrganizingDataDialog(QDialog):
             )
 
     def load_config_dialog(self):
-        initial_dir = self._initial_dir_from_paths(
-            self.base_csv_edit.text(),
-            self.final_output_csv_edit.text(),
-            self._config_dir(),
-        )
         path, _ = QFileDialog.getOpenFileName(
             self,
             '設定JSONを読込',
-            initial_dir,
+            self._config_dir(),
             'JSON (*.json)',
         )
         if not path:
@@ -956,15 +955,10 @@ class OrganizingDataDialog(QDialog):
             QMessageBox.critical(self, 'Organizing Data', str(exc))
 
     def save_config_dialog(self):
-        initial_dir = self._initial_dir_from_paths(
-            self.final_output_csv_edit.text(),
-            self.base_csv_edit.text(),
-            self._config_dir(),
-        )
         path, _ = QFileDialog.getSaveFileName(
             self,
             '設定JSONを保存',
-            initial_dir,
+            self._config_dir(),
             'JSON (*.json)',
         )
         if not path:
@@ -981,21 +975,24 @@ class OrganizingDataDialog(QDialog):
             QMessageBox.information(self, 'Organizing Data', '設定を保存しました。')
 
     def _config_dir(self):
-        folder = Path(__file__).resolve().parent / 'configs'
-        folder.mkdir(exist_ok=True)
-        return str(folder)
+        folder = process_config_dir(self._process_name(), create=True)
+        if folder:
+            return folder
+        fallback = Path(__file__).resolve().parent / 'configs'
+        fallback.mkdir(exist_ok=True)
+        return str(fallback)
+
+    def _process_name(self):
+        return CSV_JOIN_PROCESS_NAME
 
     def _project_dir(self):
-        project_path = QgsProject.instance().fileName()
-        if project_path:
-            project_dir = os.path.dirname(project_path)
-            if project_dir:
-                return project_dir
-        return ''
+        return kdq_project_dir()
 
     def _default_config_path(self):
-        folder = self._project_dir() or self._config_dir()
-        return os.path.join(folder, DEFAULT_CONFIG_FILENAME)
+        path = process_config_path(self._process_name(), DEFAULT_CONFIG_FILENAME, create_dir=True)
+        if path:
+            return path
+        return os.path.join(self._config_dir(), DEFAULT_CONFIG_FILENAME)
 
     def _write_config(self, path, config):
         Path(path).parent.mkdir(parents=True, exist_ok=True)
@@ -2102,8 +2099,13 @@ class OrganizingDataGpkgDialog(OrganizingDataDialog):
             self.refresh_key_a_options()
 
     def _default_config_path(self):
-        folder = self._project_dir() or self._config_dir()
-        return os.path.join(folder, GPKG_DEFAULT_CONFIG_FILENAME)
+        path = process_config_path(self._process_name(), GPKG_DEFAULT_CONFIG_FILENAME, create_dir=True)
+        if path:
+            return path
+        return os.path.join(self._config_dir(), GPKG_DEFAULT_CONFIG_FILENAME)
+
+    def _process_name(self):
+        return GPKG_JOIN_PROCESS_NAME
 
     def run_workflow(self):
         config = self.get_config()
@@ -2447,10 +2449,8 @@ class OrganizingDataTool:
         self.dlg.activateWindow()
 
     def _startup_config(self):
-        project_path = QgsProject.instance().fileName()
-        if project_path:
-            config_path = os.path.join(os.path.dirname(project_path), DEFAULT_CONFIG_FILENAME)
-        else:
+        config_path = process_config_path(CSV_JOIN_PROCESS_NAME, DEFAULT_CONFIG_FILENAME)
+        if not config_path:
             config_path = os.path.join(self.plugin_dir, 'configs', DEFAULT_CONFIG_FILENAME)
 
         if os.path.exists(config_path):
@@ -2496,10 +2496,8 @@ class OrganizingDataGpkgTool(OrganizingDataTool):
         self.dlg.activateWindow()
 
     def _startup_config(self):
-        project_path = QgsProject.instance().fileName()
-        if project_path:
-            config_path = os.path.join(os.path.dirname(project_path), GPKG_DEFAULT_CONFIG_FILENAME)
-        else:
+        config_path = process_config_path(GPKG_JOIN_PROCESS_NAME, GPKG_DEFAULT_CONFIG_FILENAME)
+        if not config_path:
             config_path = os.path.join(self.plugin_dir, 'configs', GPKG_DEFAULT_CONFIG_FILENAME)
 
         if os.path.exists(config_path):
