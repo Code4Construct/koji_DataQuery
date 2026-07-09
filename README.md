@@ -3,6 +3,9 @@
 koji DataQuery is a QGIS 3 plugin for CSV and GeoPackage data preparation workflows.
 It aims to become a Power Query-like toolset for QGIS.
 
+- Website: https://www.arinobu.org/koji_DataQuery.html
+- Repository: https://github.com/Code4Construct/koji_DataQuery
+
 ## Features
 
 - CSV cleanup and preprocessing
@@ -21,6 +24,19 @@ QGIS3/profiles/default/python/plugins/koji_DataQuery
 ```
 
 Then restart QGIS or reload the plugin from the QGIS Plugin Manager.
+
+## Build Plugin ZIP
+
+Run from the repository root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\build_plugin_zip.ps1
+powershell -ExecutionPolicy Bypass -File tools\validate_plugin_zip.ps1
+```
+
+The QGIS upload ZIP is created at `dist/koji_DataQuery.zip`.
+
+For release steps, see `QGIS_PLUGIN_UPLOAD.md`.
 
 ## QGIS Plugin Entry Points
 

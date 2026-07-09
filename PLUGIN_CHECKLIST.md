@@ -13,6 +13,12 @@
 - `README.md`: added for installation and usage notes.
 - `CHANGELOG.md`: added for version history.
 - `PLUGIN_CHECKLIST.md`: added for maintenance checks.
+- `.github/workflows/build-plugin-zip.yml`: added for ZIP artifact builds.
+- `.github/workflows/release-plugin.yml`: added for VirusTotal-gated GitHub Releases.
+- `tools/build_plugin_zip.ps1`: added for local and CI ZIP creation.
+- `tools/validate_plugin_zip.ps1`: added for QGIS upload ZIP validation.
+- `QGIS_PLUGIN_UPLOAD.md`: added for upload and release steps.
+- `.gitignore`: added to keep generated files out of commits.
 
 ## Notes
 
