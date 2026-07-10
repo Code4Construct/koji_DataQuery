@@ -42,8 +42,8 @@ from qgis.PyQt.QtWidgets import (
 MAX_STEPS = 10
 MODE_SELECT_FIELDS = 'select_fields'
 MODE_OVERWRITE_FIELDS = 'overwrite_fields'
-DEFAULT_CONFIG_FILENAME = 'kojiGIS_tools_data_organize3_csv_join_default.json'
-GPKG_DEFAULT_CONFIG_FILENAME = 'kojiGIS_tools_data_organize4_gpkg_join_default.json'
+DEFAULT_CONFIG_FILENAME = 'preset.json'
+GPKG_DEFAULT_CONFIG_FILENAME = 'preset.json'
 CSV_JOIN_PROCESS_NAME = 'CSVの結合'
 GPKG_JOIN_PROCESS_NAME = 'GeoPackageの結合'
 
@@ -407,13 +407,13 @@ class OrganizingDataDialog(QDialog):
         toolbar = QHBoxLayout()
         self.load_button = QPushButton('プリセット呼出')
         self.save_button = QPushButton('プリセット更新')
-        self.default_load_button = QPushButton('初期設定読込')
-        self.default_save_button = QPushButton('初期設定上書')
+        self.default_load_button = QPushButton('設定読込')
+        self.default_save_button = QPushButton('設定保存')
 
-        self.load_button.clicked.connect(self.load_config_dialog)
-        self.save_button.clicked.connect(self.save_config_dialog)
-        self.default_load_button.clicked.connect(self.load_default_config)
-        self.default_save_button.clicked.connect(self.save_default_config)
+        self.load_button.clicked.connect(self.load_default_config)
+        self.save_button.clicked.connect(self.save_default_config)
+        self.default_load_button.clicked.connect(self.load_config_dialog)
+        self.default_save_button.clicked.connect(self.save_config_dialog)
 
         toolbar.addWidget(self.load_button)
         toolbar.addWidget(self.save_button)
@@ -912,14 +912,14 @@ class OrganizingDataDialog(QDialog):
                 QMessageBox.information(
                     self,
                     'Organizing Data',
-                    '初期設定を読み込みました。\n\n{}'.format(path),
+                    'プリセットを呼び出しました。\n\n{}'.format(path),
                 )
                 return
 
             QMessageBox.warning(
                 self,
                 'Organizing Data',
-                '初期設定ファイルが見つかりません。\n「初期設定上書」で現在の設定を保存してください。\n\n{}'.format(path),
+                'プリセットファイルが見つかりません。\n「プリセット更新」で現在の設定を保存してください。\n\n{}'.format(path),
             )
         except Exception as exc:
             QMessageBox.critical(self, 'Organizing Data', str(exc))
@@ -936,7 +936,7 @@ class OrganizingDataDialog(QDialog):
             QMessageBox.information(
                 self,
                 'Organizing Data',
-                '初期設定を上書き保存しました。\n\n{}'.format(path),
+                'プリセットを更新しました。\n\n{}'.format(path),
             )
 
     def load_config_dialog(self):
@@ -2456,7 +2456,7 @@ class OrganizingDataTool:
             reply = QMessageBox.question(
                 self.iface.mainWindow(),
                 'データ整理４',
-                '初期設定を読み込みますか？\n\n{}'.format(config_path),
+                'プリセットを読み込みますか？\n\n{}'.format(config_path),
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )
@@ -2503,7 +2503,7 @@ class OrganizingDataGpkgTool(OrganizingDataTool):
             reply = QMessageBox.question(
                 self.iface.mainWindow(),
                 'データ整理５',
-                '初期設定を読み込みますか？\n\n{}'.format(config_path),
+                'プリセットを読み込みますか？\n\n{}'.format(config_path),
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )

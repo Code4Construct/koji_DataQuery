@@ -30,7 +30,7 @@ from .data_organize1_processor import normalize_headers
 from .config_paths import process_config_dir, process_config_path, project_dir as kdq_project_dir
 
 
-DEFAULT_CONFIG_FILENAME = 'kojiGIS_tools_data_organize2_query_default.json'
+DEFAULT_CONFIG_FILENAME = 'preset.json'
 PROCESS_NAME = 'CSV集計クエリ'
 
 
@@ -241,15 +241,15 @@ class DataOrganize2QueryDialog(QDialog):
         footer = QHBoxLayout()
         load_button = QPushButton('プリセット呼出')
         save_button = QPushButton('プリセット更新')
-        default_load_button = QPushButton('初期設定読込')
-        default_save_button = QPushButton('初期設定上書')
+        default_load_button = QPushButton('設定読込')
+        default_save_button = QPushButton('設定保存')
         preview_button = QPushButton('プレビュー更新')
         run_button = QPushButton('実行')
         close_button = QPushButton('Close')
-        load_button.clicked.connect(self.load_config_dialog)
-        save_button.clicked.connect(self.save_config_dialog)
-        default_load_button.clicked.connect(self.load_default_config)
-        default_save_button.clicked.connect(self.save_default_config)
+        load_button.clicked.connect(self.load_default_config)
+        save_button.clicked.connect(self.save_default_config)
+        default_load_button.clicked.connect(self.load_config_dialog)
+        default_save_button.clicked.connect(self.save_config_dialog)
         preview_button.clicked.connect(self.update_preview)
         run_button.clicked.connect(self.run_processing)
         close_button.clicked.connect(self.reject)
@@ -375,7 +375,7 @@ class DataOrganize2QueryDialog(QDialog):
             QMessageBox.warning(
                 self,
                 'データ整理３',
-                '初期設定ファイルが見つかりません。\n「初期設定上書」で現在の設定を保存してください。\n\n{}'.format(path),
+                'プリセットファイルが見つかりません。\n「プリセット更新」で現在の設定を保存してください。\n\n{}'.format(path),
             )
             return
         try:
@@ -384,7 +384,7 @@ class DataOrganize2QueryDialog(QDialog):
         except Exception as exc:
             QMessageBox.critical(self, 'データ整理３', str(exc))
         else:
-            QMessageBox.information(self, 'データ整理３', '初期設定を読み込みました。\n\n{}'.format(path))
+            QMessageBox.information(self, 'データ整理３', 'プリセットを呼び出しました。\n\n{}'.format(path))
 
     def save_default_config(self):
         path = self.default_config_path()
@@ -395,7 +395,7 @@ class DataOrganize2QueryDialog(QDialog):
         except Exception as exc:
             QMessageBox.critical(self, 'データ整理３', str(exc))
         else:
-            QMessageBox.information(self, 'データ整理３', '初期設定を上書き保存しました。\n\n{}'.format(path))
+            QMessageBox.information(self, 'データ整理３', 'プリセットを更新しました。\n\n{}'.format(path))
 
     def ask_load_default_config_on_startup(self):
         path = self.default_config_path(silent=True)
@@ -404,7 +404,7 @@ class DataOrganize2QueryDialog(QDialog):
         reply = QMessageBox.question(
             self,
             'データ整理３',
-            '初期設定を読み込みますか？\n\n{}'.format(path),
+            'プリセットを読み込みますか？\n\n{}'.format(path),
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )

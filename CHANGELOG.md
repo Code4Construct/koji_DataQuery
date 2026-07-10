@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2
+
+- Changed preset buttons to load and update fixed `preset.json` files without file selection.
+- Changed settings buttons to open file dialogs for loading and saving arbitrary JSON settings.
+
 ## 1.0.1
 
 - Removed dynamic Python execution from custom function processing for QGIS plugin security validation.
