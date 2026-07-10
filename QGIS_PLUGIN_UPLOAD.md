@@ -6,7 +6,7 @@ This repository is prepared so the QGIS plugin ZIP can be built locally or by Gi
 
 1. Update `version` in `metadata.txt`.
 2. Update `CHANGELOG.md`.
-3. Confirm `homepage` and `repository` in `metadata.txt`.
+3. Confirm `homepage`, `repository`, and `tracker` in `metadata.txt`.
 4. Build and validate the ZIP.
 
 ## Build Locally
@@ -52,4 +52,3 @@ The workflow builds `dist/koji_DataQuery.zip`, checks it with VirusTotal, and at
   - `icon.png`
 - ZIP entries use `/`, not backslashes.
 - Development files such as `.git`, `.github`, `tools`, `dist`, `__pycache__`, `.pyc`, and `.pyo` are not included.
-
