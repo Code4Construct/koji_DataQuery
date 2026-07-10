@@ -1,5 +1,6 @@
 {
   "name": "日付の統一",
+  "function_id": "date_normalize",
   "description": "選択した日付列を YYYY-MM-DD 形式へ統一します。和暦の R/H/S/T/M と西暦の区切り表記に対応します。",
   "output_mode": "existing",
   "existing_output_field": "__FIRST_INPUT__",

@@ -2,7 +2,6 @@
 
 import csv
 import json
-import math
 import os
 import re
 import unicodedata
@@ -285,7 +284,7 @@ def apply_processing_steps(headers, rows, steps):
             continue
 
         if step.get('type') == 'custom_python':
-            output_headers, output_rows = _apply_custom_python_step(output_headers, output_rows, step)
+            output_headers, output_rows = _apply_custom_function_step(output_headers, output_rows, step)
             continue
 
         if step.get('type') == 'chiban_organize':
@@ -664,50 +663,27 @@ def _parse_number(text):
         return None
 
 
-def _apply_custom_python_step(headers, rows, step):
-    code = step.get('code') or ''
+def _apply_custom_function_step(headers, rows, step):
     input_fields = step.get('input_fields') or []
     output_field = step.get('output_field') or ''
-    namespace = {}
-    safe_globals = {
-        '__builtins__': {
-            'abs': abs,
-            'bool': bool,
-            'dict': dict,
-            'float': float,
-            'int': int,
-            'len': len,
-            'list': list,
-            'max': max,
-            'min': min,
-            'round': round,
-            'str': str,
-            'sum': sum,
-            'tuple': tuple,
-        },
-        'math': math,
-        're': re,
-        'unicodedata': unicodedata,
-    }
-    exec(code, safe_globals, namespace)
-    safe_globals.update(namespace)
-    transform = namespace.get('transform')
-    if not callable(transform):
-        raise ValueError('カスタム関数には def transform(row, values): を定義してください。')
+    function_id = _custom_function_id(step)
+    if function_id not in ('chiban_organize', 'date_normalize'):
+        raise ValueError('Unsupported custom function: {}'.format(function_id or 'unknown'))
 
     output_headers = list(headers)
     output_rows = [dict(row) for row in rows]
-    if output_field and output_field not in output_headers:
+    if function_id == 'chiban_organize':
+        for field in ('地番整理', '地番説明'):
+            if field not in output_headers:
+                output_headers.append(field)
+    elif output_field and output_field not in output_headers:
         output_headers.append(output_field)
 
     for row in output_rows:
         values = {field: row.get(field, '') for field in input_fields}
         for index, field in enumerate(input_fields):
             values[chr(ord('A') + index)] = row.get(field, '')
-        try:
-            result = transform(dict(row), values)
-        except TypeError:
-            result = transform(dict(row))
+        result = _run_custom_function(function_id, values)
 
         if isinstance(result, dict):
             for field, value in result.items():
@@ -718,6 +694,35 @@ def _apply_custom_python_step(headers, rows, step):
             row[output_field] = '' if result is None else result
 
     return output_headers, output_rows
+
+
+def _custom_function_id(step):
+    function_id = step.get('function_id') or step.get('standard_function') or ''
+    if function_id:
+        return function_id
+    path = (step.get('function_file_path') or '').replace('\\', '/').lower()
+    if path.endswith('chiban_organize.json'):
+        return 'chiban_organize'
+    if path.endswith('date_normalize.json'):
+        return 'date_normalize'
+    code = step.get('code') or ''
+    if '_organize_chiban_value' in code or "'地番整理'" in code:
+        return 'chiban_organize'
+    if 'base_years' in code and 'R' in code and 'H' in code:
+        return 'date_normalize'
+    return ''
+
+
+def _run_custom_function(function_id, values):
+    if function_id == 'chiban_organize':
+        organized, description = _organize_chiban_value(values.get('A', ''))
+        return {
+            '地番整理': organized,
+            '地番説明': description,
+        }
+    if function_id == 'date_normalize':
+        return _normalize_date_value(values.get('A', ''), 'yyyy-mm-dd')
+    raise ValueError('Unsupported custom function: {}'.format(function_id or 'unknown'))
 
 
 def apply_string_concat_steps(headers, rows, steps):

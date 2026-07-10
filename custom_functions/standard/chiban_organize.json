@@ -1,5 +1,6 @@
 {
   "name": "地番整理",
+  "function_id": "chiban_organize",
   "description": "選択した地番列から「地番整理」と「地番説明」を作成します。データ整理の地番整理と同じ処理です。",
   "output_mode": "new",
   "new_output_field": "地番整理",

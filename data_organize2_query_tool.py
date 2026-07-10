@@ -5,7 +5,6 @@ import json
 import os
 
 from qgis.PyQt.QtCore import Qt
-from qgis.core import QgsProject
 from qgis.PyQt.QtWidgets import (
     QCheckBox,
     QComboBox,

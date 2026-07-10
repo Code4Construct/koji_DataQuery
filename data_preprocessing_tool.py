@@ -2,26 +2,11 @@
 
 import json
 import os
-import re
-import shutil
-import tempfile
-import zipfile
-from datetime import datetime
 
-from qgis.core import (
-    QgsMapLayer,
-    QgsPrintLayout,
-    QgsProject,
-    QgsRasterLayer,
-    QgsReadWriteContext,
-    QgsVectorFileWriter,
-    QgsVectorLayer,
-)
-from qgis.PyQt.QtCore import QCoreApplication, Qt, QSettings, QTranslator
+from qgis.core import QgsProject
+from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QGuiApplication, QIcon
-from qgis.PyQt.QtXml import QDomDocument
 from qgis.PyQt.QtWidgets import (
-    QAction,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -45,8 +30,6 @@ from qgis.PyQt.QtWidgets import (
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
-    QTreeWidget,
-    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -937,67 +920,13 @@ class ColumnReorderDialog(QDialog):
         self.reorder_table.setHorizontalHeaderLabels(['列名'])
         self.reorder_table.horizontalHeader().setStretchLastSection(True)
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        content = QWidget()
-        grid = QGridLayout(content)
-        grid.setContentsMargins(4, 4, 4, 4)
-        grid.setColumnStretch(0, 1)
-        grid.addWidget(QLabel('列名'), 0, 0)
-        grid.addWidget(QLabel('順序'), 0, 1)
-
-        for index, field in enumerate(fields, start=1):
-            label = QLabel(field)
-            order_edit = QLineEdit(str(order_map.get(field, index)))
-            order_edit.setMaximumWidth(80)
-            order_edit.setAlignment(Qt.AlignRight)
-            grid.addWidget(label, index, 0)
-            grid.addWidget(order_edit, index, 1)
-            self.rows.append((field, label, order_edit))
-
-        grid.setRowStretch(len(fields) + 1, 1)
-        scroll.setWidget(content)
-        layout.addWidget(scroll, 1)
-        scroll.hide()
-
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
-    def apply_filter(self, text):
-        text = text.strip().lower()
-        for field, label, order_edit in self.rows:
-            visible = text in field.lower()
-            label.setVisible(visible)
-            order_edit.setVisible(visible)
-
     def accept(self):
         super().accept()
-
-    def order_map(self):
-        result = {}
-        for field, _, order_edit in self.rows:
-            value = order_edit.text().strip()
-            if value:
-                result[field] = int(value)
-        return result
-
-
-    def _refresh_reorder_table(self, selected_row=None):
-        self.reorder_table.setRowCount(len(self.reorder_fields))
-        for row, field in enumerate(self.reorder_fields):
-            self.reorder_table.setItem(row, 0, QTableWidgetItem(field))
-            order_item = QTableWidgetItem(str(row + 1))
-            order_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.reorder_table.setItem(row, 1, order_item)
-        if self.reorder_fields:
-            if selected_row is None:
-                selected_row = min(self.reorder_table.currentRow(), len(self.reorder_fields) - 1)
-            selected_row = max(0, min(selected_row, len(self.reorder_fields) - 1))
-            self.reorder_table.selectRow(selected_row)
-            self.reorder_table.setCurrentCell(selected_row, 0)
-        self.apply_filter(self.filter_edit.text())
 
     def _refresh_reorder_table(self, selected_row=None):
         self.reorder_table.setColumnCount(1)
@@ -1151,6 +1080,7 @@ class CustomPythonFunctionDialog(QDialog):
         code_buttons.addStretch(1)
         code_layout.addLayout(code_buttons)
         self.function_file_path = config.get('function_file_path', '')
+        self.function_id = config.get('function_id', '')
         settings_layout.addWidget(code_group, 1)
 
         splitter.addWidget(fields_panel)
@@ -1250,6 +1180,7 @@ class CustomPythonFunctionDialog(QDialog):
             with open(path, 'r', encoding='utf-8') as f:
                 if path.lower().endswith('.json'):
                     data = json.load(f)
+                    self.function_id = data.get('function_id', '')
                     self.code_edit.setPlainText(data.get('code', ''))
                     if data.get('output_mode') in ('new', 'existing'):
                         self.output_mode_combo.setCurrentIndex(1 if data.get('output_mode') == 'existing' else 0)
@@ -1263,6 +1194,7 @@ class CustomPythonFunctionDialog(QDialog):
                         self.existing_output_combo.setCurrentText(data.get('existing_output_field'))
                     self._sync_output_mode()
                 else:
+                    self.function_id = ''
                     self.code_edit.setPlainText(f.read())
         except Exception as exc:
             QMessageBox.critical(self, 'データ整理１', str(exc))
@@ -1389,6 +1321,7 @@ class CustomPythonFunctionDialog(QDialog):
                 else self.existing_output_combo.currentText().strip()
             ),
             'output_field': self.output_field(),
+            'function_id': self.function_id,
             'code': self.code(),
             'function_file_path': self.function_file_path,
         }
@@ -1463,8 +1396,6 @@ class DataOrganize1Dialog(QDialog):
         io_layout.addWidget(QLabel('出力文字コード'), 1, 3)
         io_layout.addWidget(self.output_encoding_combo, 1, 4)
         main_layout.addWidget(io_group)
-
-        splitter = QSplitter(Qt.Horizontal)
 
         steps_panel = QWidget()
         steps_panel.setMinimumHeight(dpi_px(300))
@@ -2323,6 +2254,8 @@ class DataOrganize1Dialog(QDialog):
                         'input_fields': config.get('input_fields') or [],
                         'output_mode': config.get('output_mode') or 'new',
                         'output_field': config.get('output_field') or '',
+                        'function_id': config.get('function_id') or '',
+                        'function_file_path': config.get('function_file_path') or '',
                         'code': config.get('code') or '',
                     })
 
@@ -2334,10 +2267,10 @@ class DataOrganize1Dialog(QDialog):
     def load_preview_from_input(self):
         if getattr(self, '_updating_steps', False):
             return
-        if not (
-            hasattr(self, 'preview_table')
-            and hasattr(self, 'changed_preview_table')
-        ):
+        if not all(hasattr(self, name) for name in (
+            'preview_table',
+            'changed_preview_table',
+        )):
             return
 
         csv_path = self.input_csv_edit.text().strip()
@@ -2468,6 +2401,8 @@ class DataOrganize1Dialog(QDialog):
                         'input_fields': config.get('input_fields') or [],
                         'output_mode': config.get('output_mode') or 'new',
                         'output_field': config.get('output_field') or '',
+                        'function_id': config.get('function_id') or '',
+                        'function_file_path': config.get('function_file_path') or '',
                         'code': config.get('code') or '',
                     })
         return steps
@@ -2863,11 +2798,11 @@ class DataOrganize2GpkgDialog(DataOrganize1Dialog):
     def load_preview_from_input(self):
         if getattr(self, '_updating_steps', False):
             return
-        if not (
-            hasattr(self, 'preview_table')
-            and hasattr(self, 'changed_preview_table')
-            and hasattr(self, 'layer_name_combo')
-        ):
+        if not all(hasattr(self, name) for name in (
+            'preview_table',
+            'changed_preview_table',
+            'layer_name_combo',
+        )):
             return
 
         gpkg_path = self.input_csv_edit.text().strip()

@@ -16,7 +16,7 @@ from qgis.core import (
     QgsVectorLayer,
     QgsWkbTypes,
 )
-from qgis.PyQt.QtCore import QCoreApplication, Qt
+from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -1242,7 +1242,6 @@ class OrganizingDataDialog(QDialog):
             for row in rows
             if self._join_key(row.get(key_a, ''))
         }
-
     def _write_unmatched_b_rows_if_requested(self, rows, step, encoding, output_encoding, delimiter, matched_a_keys=None):
         output_csv = step.get('unmatched_b_csv', '').strip()
         if not output_csv:

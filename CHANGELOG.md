@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- Removed dynamic Python execution from custom function processing for QGIS plugin security validation.
+- Routed bundled standard custom functions through fixed internal handlers.
+
 ## 1.0.0
 
 - Initial koji DataQuery plugin structure.
